@@ -1191,14 +1191,15 @@ const Dlg = {
       this.resolve = res; this.type(html, () => { });
     });
   },
-  choose(who, html, opts, wrong = []) {
+  /* order: 선택지를 보여 줄 순서(원래 번호의 배열). 돌려주는 값과 data-i, wrong은 원래 번호, 숫자 키는 보이는 자리 */
+  choose(who, html, opts, wrong = [], order = null) {
     return new Promise(res => {
       this.show(who); this.mode = 'choose'; this.resolve = null; $('dlg').classList.add('choosing');
       this.type(html, () => {
         const box = $('dlg-ch');
-        box.innerHTML = opts.map((o, i) => `<button type="button" data-i="${i}" class="${wrong.includes(i) ? 'wrong' : ''}"><span class="k">${i + 1}</span><span>${o}</span></button>`).join('');
+        box.innerHTML = (order || opts.map((_, i) => i)).map((i, k) => `<button type="button" data-i="${i}" class="${wrong.includes(i) ? 'wrong' : ''}"><span class="k">${k + 1}</span><span>${opts[i]}</span></button>`).join('');
         box.querySelectorAll('button').forEach(b => b.onclick = e => { e.stopPropagation(); sfx('sel'); this.pick = null; box.innerHTML = ''; $('dlg').classList.remove('choosing'); res(+b.dataset.i); });
-        this.pick = i => { const b = box.querySelector(`button[data-i="${i}"]`); if (b) b.click(); };
+        this.pick = k => { const b = box.querySelectorAll('button')[k]; if (b) b.click(); };
         refit();
         const first = box.querySelector('button:not(.wrong)') || box.querySelector('button'); if (first) try { first.focus({ preventScroll: true }); } catch (e) { first.focus(); }
       });
@@ -1213,11 +1214,13 @@ const Dlg = {
 };
 $('dlg').addEventListener('click', () => { if (Dlg.mode === 'say') Dlg.advance(); else if (Dlg.timer) Dlg.finish(); });
 
+/* 퀴즈 선택지는 보여 줄 때마다 섞는다(정답이 늘 같은 자리에 있지 않게). 한 문제 안에서는 순서를 고정한다 */
+const optOrder = n => shuffle(Array.from({ length: n }, (_, i) => i));
 async function quiz(who, text, opts, ans, fb = {}, fbWho) {
-  const wrong = [];
+  const wrong = [], order = optOrder(opts.length);
   S.stats.q++;
   for (;;) {
-    const c = await Dlg.choose(who, text, opts, wrong);
+    const c = await Dlg.choose(who, text, opts, wrong, order);
     if (c === ans) { sfx('ok'); if (wrong.length) S.stats.qw++; return wrong.length; }
     sfx('no'); if (!wrong.includes(c)) wrong.push(c);
     await Dlg.say(fbWho || who, fb[c] || '다시 생각해 보자.');
@@ -1293,7 +1296,7 @@ function updateHUD() {
    ========================================================= */
 async function run(fn) {
   if (G.busy) return;
-  G.busy++; held.clear(); if (P) P.path = null;
+  G.busy++; held.clear(); if (P) { P.path = null; P.after = null; }
   try { await fn(); } catch (e) { console.error(e); }
   finally { G.busy--; Dlg.close(); hideCard(); placeNPCs(); updateHUD(); save(); }
 }
@@ -1657,7 +1660,7 @@ function mirrorBoard() {
     const inner = IC.fish.replace(/^<svg[^>]*>/, '').replace(/<\/svg>$/, ''), w = 16 / n;
     const sixth = `<svg class="sixth" viewBox="-.5 -1.5 17 10" role="img" aria-label="물고기 ${n}분의 1마리"><defs><clipPath id="mr-clip"><rect x="-1" y="-2" width="${w + 1}" height="12"/></clipPath></defs>
       <g opacity=".2">${inner}</g><g clip-path="url(#mr-clip)">${inner}</g>${Array.from({ length: n - 1 }, (_, k) => `<line x1="${((k + 1) * w).toFixed(2)}" y1="-1" x2="${((k + 1) * w).toFixed(2)}" y2="8" class="cut"/>`).join('')}</svg>`;
-    const st = { step: 1, pick: null, ok: false, wrong: [], said: '' };
+    const st = { step: 1, pick: null, ok: false, wrong: [], said: '', ord: null };   // ord: 선택지를 보여 줄 순서(질문마다 한 번 섞음)
     const sh = openModal(false);
     const pane = (mirror, act, got) => `<div class="mr-pane${mirror ? ' mirror' : ''}"><div class="mr-h">${mirror ? '🪞 거울 속 용돌이' : '🐲 이 세계의 용돌이'}</div>
       <img class="mr-yd" src="${PORT.yd}" alt=""><div class="mr-act">${act}</div><div class="mr-got"><small>얻은 것</small>${got}</div></div>`;
@@ -1679,7 +1682,7 @@ function mirrorBoard() {
         const q = Q();
         body = `<p class="sub">${st.step === 1 ? '거울 연못에 비친 다른 세계의 용돌이는 다른 일을 했어요.' : `이번엔 ${H.fruit}시간만 남았어요. 용돌이는 열매를 땄고, 거울 속 용돌이는 낚시를 했어요.`}</p>
           <div class="mr">${panes}</div><div class="mr-cap">거울 속 내가 가진 것 = <b>내가 포기한 것</b></div>
-          <div class="mr-q"><b>${q.q}</b><div class="row">${q.o.map((t, i) => `<button type="button" class="btn ghost${st.wrong.includes(i) ? ' wrong' : ''}" data-a="${i}" ${st.ok || st.wrong.includes(i) ? 'disabled' : ''}>${t}</button>`).join('')}</div></div>`;
+          <div class="mr-q"><b>${q.q}</b><div class="row">${(st.ord = st.ord || optOrder(q.o.length)).map(i => `<button type="button" class="btn ghost${st.wrong.includes(i) ? ' wrong' : ''}" data-a="${i}" ${st.ok || st.wrong.includes(i) ? 'disabled' : ''}>${q.o[i]}</button>`).join('')}</div></div>`;
       }
       sh.innerHTML = `<h2>🪞 거울 연못</h2>${body}${st.said}
         <div class="row">${st.ok ? `<button type="button" class="btn" id="${st.step === 1 ? 'mr-step2' : 'mr-next'}">${st.step === 1 ? '다음 장면 ▶' : '다음 ▶'}</button>` : ''}</div>`;
@@ -1694,7 +1697,7 @@ function mirrorBoard() {
         } else { sfx('no'); st.wrong.push(i); st.said = sayHTML('rchief', q.fb[i] || '다시 생각해 보렴.'); }
         render(); scrollSay(sh);
       });
-      const s2 = sh.querySelector('#mr-step2'); if (s2) { s2.onclick = () => { sfx('sel'); st.step = 2; st.ok = false; st.wrong = []; st.said = ''; S.stats.q++; render(); }; setTimeout(() => s2.focus(), 50); }
+      const s2 = sh.querySelector('#mr-step2'); if (s2) { s2.onclick = () => { sfx('sel'); st.step = 2; st.ok = false; st.wrong = []; st.said = ''; st.ord = null; S.stats.q++; render(); }; setTimeout(() => s2.focus(), 50); }
       const nx = sh.querySelector('#mr-next'); if (nx) { nx.onclick = () => { sfx('sel'); closeModal(); resolve(st.pick); }; setTimeout(() => nx.focus(), 50); }
     };
     render();
@@ -2594,7 +2597,7 @@ function applyView() {
   setTimeout(resize, 20);
 }
 function openMenu() {
-  if (modals.length) return;
+  if (modals.length || G.fade) return;   // 화면 전환 중에 처음 화면으로 나가면 전환 뒤에 버린 이야기가 이어질 수 있다
   const sh = openModal(true);
   const dark = VIEW.theme ? VIEW.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
   sh.innerHTML = `${xBtn}<h2>⚙️ 설정</h2>
@@ -2825,6 +2828,8 @@ function showTitle() {
 }
 function startGame(state) {
   if (G.work) { if (G.work.fishing) clearTimeout(G.work.fishing.timer); restoreTrees(G.work); G.work = null; AH.on = false; workBar(); }
+  // 이야기 도중(대사·판)에 처음 화면이나 장 선택으로 나왔으면 그 이야기는 버린다. busy가 남으면 움직일 수 없다
+  G.busy = 0; Dlg.close(); while (modals.length) closeModal(); hideCard(); held.clear(); heldOrder = [];
   S = state; TITLE_ON = false;
   $('title').hidden = true; $('hud').hidden = false; applyView();
   initPlayer(); placeNPCs(); updateHUD(); resize(); save();
