@@ -1460,6 +1460,9 @@ const stockTxt = s => `<span class="nw">${IC.fish}${s.fish} ${IC.fruit}${s.fruit
 const shortTxt = (a, n) => { const s = []; if (a.fish < n.fish) s.push(`물고기 ${n.fish - a.fish}마리`); if (a.fruit < n.fruit) s.push(`열매 ${n.fruit - a.fruit}개`); return s.join('와 '); };
 /* 행운의 덤: 만든 양에서 덤을 뺀 양, 덤 표시 */
 const noLuck = m => { const L = m.luck || { fish: 0, fruit: 0 }; return { fish: m.fish - L.fish, fruit: m.fruit - L.fruit }; };
+/* 1장·3장·여우섬: 행운의 덤만큼 잔치 손님이 늘어 필요한 양도 늘어난다. 그래서 채웠는지는 덤이 없을 때와 똑같이 갈린다 */
+const raised = (need, m) => { const L = m.luck || { fish: 0, fruit: 0 }; return { fish: need.fish + L.fish, fruit: need.fruit + L.fruit }; };
+const hasLuck = m => !!(m.luck && (m.luck.fish || m.luck.fruit));
 const luckTxt = m => { const L = m.luck; return L && (L.fish || L.fruit) ? ` <small class="nw luck">🍀 덤 ${L.fish ? IC.fish + L.fish : ''}${L.fruit ? IC.fruit + L.fruit : ''}</small>` : ''; };
 /* 부족한 양을 아이콘으로 짧게: 🐟1 · 🍎2 부족 */
 function shortIcon(a, n) {
@@ -1521,7 +1524,8 @@ function warp(x, y, dir = 'down') {
   P.mode = 'land'; P.x = x; P.y = y; P.px = x * TILE; P.py = y * TILE; P.moving = false; P.path = null; P.dir = dir;
   resetTrail(); P.island = islandAt(x, y); updateMusic(); save();
 }
-/* cfg: cost(1개에 드는 시간), hours, need(주문서), at(WORK_PLACES의 마을), day(그 활동에서 며칠째인지), info(작업 막대에 덧붙일 HTML).
+/* cfg: cost(1개에 드는 시간), hours, need(주문서), at(WORK_PLACES의 마을), day(그 활동에서 며칠째인지), info(작업 막대에 덧붙일 HTML),
+   raise(행운의 덤만큼 주문서를 늘림: 1장·3장·여우섬).
    이야기 진행 중(run 안)에 불러도 그동안은 걸어 다닐 수 있다.
    2일째부터는 손에 익어 짧게 걸리는 물건(토끼 마을 열매, 여우 마을 물고기)을 Ⓐ 한 번에 2개씩 얻는다 */
 function workDay(cfg) {
@@ -1551,7 +1555,7 @@ function workBar() {
   if (!b) { b = document.createElement('div'); b.id = 'workbar'; b.className = 'workbar'; $('stage').appendChild(b); }
   const w = G.work, left = workLeft(), n = w.need;
   b.innerHTML = `<span class="wb-clock">⏰ <b>${left}</b>시간 남음</span><span class="nw">🎒 ${IC.fish}${w.bag.fish} ${IC.fruit}${w.bag.fruit}</span>
-    ${n ? `<span class="nw">📜 ${IC.fish}${w.bag.fish}/${n.fish} ${IC.fruit}${w.bag.fruit}/${n.fruit}</span>` : ''}
+    ${n ? (r => `<span class="nw${hasLuck(w) && w.raise ? ' luck' : ''}">📜 ${IC.fish}${w.bag.fish}/${r.fish} ${IC.fruit}${w.bag.fruit}/${r.fruit}${hasLuck(w) && w.raise ? ' 🎊' : ''}</span>`)(w.raise ? raised(n, w) : n) : ''}
     ${w.info || ''}${w.per > 1 ? `<span class="nw wb-x2">✋ ${IC[w.short]} ${w.per}${GD[w.short].u}씩</span>` : ''}
     <button type="button" id="wb-end">🌙 일 마치기</button>${w.msg ? `<span class="wb-msg" aria-live="polite">${w.msg}</span>` : ''}`;
   $('toasts').style.top = `${b.offsetTop + b.offsetHeight + 6}px`;   // 알림이 작업 막대에 가리지 않게 그 아래에 띄운다
@@ -1569,13 +1573,13 @@ function luckRoll(n) {
 function spend(k, n, note = '', got = n) {
   const w = G.work, extra = got - n; w.used += w.cost[k] * n; w.bag[k] += got; w.luck[k] += extra;
   AH.next = Math.max(AH.next, performance.now() + HOLD_EVERY);
-  if (extra > 0) { workSay(`🎉 ${IC[k]} +${got} <small>(${w.cost[k] * n}시간 · 행운의 덤 ${extra}${GD[k].u})${note}</small>`); celebrate(k, got); }
+  if (extra > 0) { workSay(`🎉 ${IC[k]} +${got} <small>(${w.cost[k] * n}시간 · 행운의 덤 ${extra}${GD[k].u}${w.raise && w.need ? ` · 🎊 주문 ${GD[k].n} +${extra}` : ''})${note}</small>`); celebrate(k, got, w.raise && w.need ? extra : 0); }
   else workSay(`${IC[k]} +${n} <small>(${w.cost[k] * n}시간)${note}</small>`, 'ok');
   if (workLeft() <= 0) setTimeout(endWork, 450);
 }
 /* 행운 알림: 시스템 알림, 폭죽, 소리, 진동 */
-function celebrate(k, got) {
-  toast(`🎉 행운! ${GD[k].n} ${got}${GD[k].u}를 한 번에 ${k === 'fish' ? '낚았어요' : '땄어요'}!`, 'gold', 3000);
+function celebrate(k, got, raise = 0) {
+  toast(`🎉 행운! ${GD[k].n} ${got}${GD[k].u}를 한 번에 ${k === 'fish' ? '낚았어요' : '땄어요'}!${raise ? `<br><small>🎊 소문이 나서 잔치 손님이 늘었어요. 주문도 ${GD[k].n} ${raise}${GD[k].u} 늘어요</small>` : ''}`, 'gold', raise ? 3800 : 3000);
   sfx('win'); fireworks(); buzz([70, 50, 70, 50, 180]);
 }
 /* 지금 카메라 위치(그리기 전이라도 render와 같은 식으로 바로 계산) */
@@ -1760,13 +1764,13 @@ function drawRate(tries) {
 function ledgerMarket(tries, cur) {
   if (!tries.length) return '<h3>📒 장부</h3><p class="note">아직 시장에 간 날이 없어요.</p>';
   const body = tries.map((t, i) => { const [a, b] = t.rate;
-    return `<tr class="${i === tries.length - 1 && cur === 'last' ? 'new' : ''} ${cur && cur.fish != null && t.made.fish === cur.fish ? 'cur' : ''}"><td>${i + 1}일</td><td>${stockTxt(t.made)}${luckTxt(t.made)}</td><td><span class="nw">${IC.fish}${a}=${IC.fruit}${b}</span></td><td>${t.n ? `<span class="nw">${IC.fruit}${b * t.n}→${IC.fish}${a * t.n}</span>` : '—'}</td><td>${t.lucky ? `<span class="nw">🍀 덤 빼면</span> ${shortIcon(t.base, NEED)}` : shortIcon(t.after, NEED)}</td></tr>`; }).join('');
+    return `<tr class="${i === tries.length - 1 && cur === 'last' ? 'new' : ''} ${cur && cur.fish != null && t.made.fish === cur.fish ? 'cur' : ''}"><td>${i + 1}일</td><td>${stockTxt(t.made)}${luckTxt(t.made)}</td><td><span class="nw">${IC.fish}${a}=${IC.fruit}${b}</span></td><td>${t.n ? `<span class="nw">${IC.fruit}${b * t.n}→${IC.fish}${a * t.n}</span>` : '—'}</td><td>${shortIcon(t.after, t.need || NEED)}</td></tr>`; }).join('');
   return `<h3>📒 장부 (시장에 간 날 ${tries.length}일)</h3><div class="tw"><table class="ledger"><thead><tr><th>날</th><th>만든 양</th><th>그날 값</th><th>바꾼 것</th><th>결과</th></tr></thead><tbody>${body}</tbody></table></div>`;
 }
-/* cfg: made, rate, hint, ledger(cur), onResult({n, after, ok}) → 말풍선 HTML */
+/* cfg: made, rate, need(행운의 덤만큼 늘어난 필요량), hint, ledger(cur), onResult({n, after, ok}) → 말풍선 HTML */
 function marketBoard(cfg) {
   return new Promise(resolve => {
-    const [a, b] = cfg.rate, made = cfg.made;
+    const [a, b] = cfg.rate, made = cfg.made, need = cfg.need || NEED;
     const max = Math.min(Math.floor(made.fruit / b), Math.floor(BEAR_FISH / a));
     const after = n => ({ fish: made.fish + a * n, fruit: made.fruit - b * n });
     const OC = HR.r.fish / HR.r.fruit;   // 토끼 마을 물고기 1마리의 기회비용 (열매)
@@ -1782,7 +1786,7 @@ function marketBoard(cfg) {
             <span class="note nw">${IC.fruit}${b * st.n} 내고 ${IC.fish}${a * st.n} 받기</span></div>
             ${!max ? `<div class="trade-row res-no">열매가 ${made.fruit}개뿐이라 한 번도 바꿀 수 없어요.</div>` : ''}`}
           <div class="out"><b>바꾼 뒤</b><span>${stockTxt(af)}</span></div>
-          <div class="need"><span class="note">잔치에 필요한 양</span>${needChip('fish', af.fish, NEED.fish)}${needChip('fruit', af.fruit, NEED.fruit)}</div></div>
+          <div class="need"><span class="note">잔치에 필요한 양${hasLuck(made) ? ' <span class="luck nw">🎊 덤만큼 손님이 늘었어요</span>' : ''}</span>${needChip('fish', af.fish, need.fish)}${needChip('fruit', af.fruit, need.fruit)}</div></div>
         ${st.said}
         <div class="row">${!st.res ? '<button type="button" class="btn" id="mk-go">🤝 이대로 하고 잔치 준비 마치기</button>'
           : `<button type="button" class="btn" id="mk-next">${st.res.ok ? '다음 ▶' : '☀️ 다음 날 다시 일하기'}</button>`}
@@ -1793,10 +1797,8 @@ function marketBoard(cfg) {
       step('#n-', -1); step('#n\\+', 1);
       const go = sh.querySelector('#mk-go');
       if (go) go.onclick = () => {
-        // 덤을 뺀 양으로도 같은 횟수로 바꿔 채워져야 통과다(행운만으로 채운 날은 다시)
-        const af2 = after(st.n), base0 = noLuck(made), base = { fish: base0.fish + a * st.n, fruit: base0.fruit - b * st.n };
-        const full = x => x.fish >= NEED.fish && x.fruit >= NEED.fruit, lucky = full(af2) && !full(base), ok = full(af2) && !lucky;
-        st.res = { n: st.n, after: af2, ok, lucky, base };
+        const af2 = after(st.n), ok = af2.fish >= need.fish && af2.fruit >= need.fruit;
+        st.res = { n: st.n, after: af2, ok };
         st.said = cfg.onResult(st.res);
         sfx(ok ? 'win' : 'no'); render(); scrollSay(sh);
       };
@@ -2167,10 +2169,10 @@ async function ch1() {
   await say('rchief', '마을 일꾼들은 겨울 채비로 손이 모자라. 교역관이 하루 일해서 잔치 음식을 마련해 주겠니?');
   await say('rchief', `우리 마을에서는 물고기 1마리를 잡는 데 ${HR.r.fish}시간, 열매 1개를 따는 데 ${HR.r.fruit}시간이 걸린단다. 해가 질 때까지 ${DAY_H}시간이야.`);
   await say('tori', '과수원은 마을 서쪽이고, 낚시터는 남쪽 부두야. 열매나무 앞에서 Ⓐ를 누르면 열매를 따고, 부두에서 바다를 보고 Ⓐ를 누르면 낚시를 해! Ⓐ를 길게 누르고 있으면 이어서 해.');
-  const bag = await workDay({ cost: HR.r, hours: DAY_H, need: NEED });
-  const lucky = !shortTxt(bag, NEED);   // 덤 없이는 하루에 물고기를 2마리까지만 잡으므로, 주문을 다 채웠다면 행운 덕분이다
-  await say('rchief', `해가 졌구나. 물고기 ${bag.fish}마리, 열매 ${bag.fruit}개라… ${lucky ? `🍀 행운의 덤 덕분에 주문서를 다 채웠구나! 하지만 덤이 없었다면 ${shortTxt(noLuck(bag), NEED)}가 모자랐단다.` : `${shortTxt(bag, NEED)}가 모자라.`}`);
-  await say('rchief', `주문서를 다 채우려면 물고기 3마리에 18시간, 열매 5개에 5시간, 모두 23시간이 필요하단다. 하루는 12시간뿐이니 ${lucky ? '행운이 없으면 늘 모자라. 잔치는 해마다 열리는데 행운만 바랄 수는 없지.' : '어떻게 일해도 모자라.'} 우리 마을 혼자서는 안 되겠구나.`);
+  const bag = await workDay({ cost: HR.r, hours: DAY_H, need: NEED, raise: true });
+  const need = raised(NEED, bag), lucky = hasLuck(bag);   // 덤 없이는 하루에 물고기를 2마리까지만 잡으므로 늘어난 주문도 늘 모자라다
+  await say('rchief', `해가 졌구나. 물고기 ${bag.fish}마리, 열매 ${bag.fruit}개라… ${lucky ? `행운의 덤 소문에 손님이 늘어 주문이 ${amt('fish', need.fish)}와 ${amt('fruit', need.fruit)}로 늘었지. ` : ''}${shortTxt(bag, need)}가 모자라.`);
+  await say('rchief', `${lucky ? '늘어난 손님 몫을 빼고 원래 주문만 봐도, ' : ''}주문서를 다 채우려면 물고기 3마리에 18시간, 열매 5개에 5시간, 모두 23시간이 필요하단다. 하루는 12시간뿐이니 어떻게 일해도 모자라. 우리 마을 혼자서는 안 되겠구나.`);
   await say('rchief', '곰 마을에 가기 전에 하나만 보고 가렴. 물고기를 잡을지 열매를 딸지 고르는 순간, 다른 하나는 포기하게 된단다. 마을 뒤 거울 연못에 비춰 보면 알 수 있지.');
   Dlg.close();
   await mirrorBoard();
@@ -2231,19 +2233,18 @@ async function ch3() {
     toast(`☀️ ${tries.length + 1}일째 아침 · 토끼 마을`, 'gold', 2400);
     if (!tries.length) await say('tori', '과수원은 서쪽, 낚시터는 남쪽 부두! 해가 지면 일한 것을 들고 교역섬 시장으로 가자.');
     if (tries.length === 1) await say('tori', '어제 해 봐서 손에 익었지? 오늘부터 열매는 Ⓐ 한 번에 2개씩 딸 수 있어. 2개에 2시간이야.');
-    const made = await workDay({ cost: HR.r, hours: DAY_H, need: NEED, day: tries.length + 1 });
-    await say('gomi', `물고기 ${made.fish}마리, 열매 ${made.fruit}개!${luckTxt(made) ? ' 행운의 덤도 있었네!' : ''} 시장으로 가자.`);
+    const made = await workDay({ cost: HR.r, hours: DAY_H, need: NEED, day: tries.length + 1, raise: true }), need = raised(NEED, made);
+    await say('gomi', `물고기 ${made.fish}마리, 열매 ${made.fruit}개!${hasLuck(made) ? ` 행운의 덤 소문에 잔치 손님이 늘어서 필요한 양이 ${amt('fish', need.fish)}, ${amt('fruit', need.fruit)}로 늘었어.` : ''} 시장으로 가자.`);
     Dlg.close();
     await fadeTo(() => warp(28, 19, 'up'));
     const rate = drawRate(tries);
     const r = await marketBoard({
-      made, rate, hint: H, ledger: cur => ledgerMarket(tries, cur),
+      made, rate, need, hint: H, ledger: cur => ledgerMarket(tries, cur),
       onResult: res => {
-        tries.push({ made, rate, n: res.n, after: res.after, ok: res.ok, lucky: res.lucky, base: res.base });
-        if (res.lucky) { H.fails++; return sayHTML('sage', `🍀 행운의 덤 덕분에 잔치에 필요한 양이 모였구나. 그런데 덤을 빼고 똑같이 바꾸면 ${res.base.fruit < 0 ? '바꿀 열매부터 모자랐단다' : `${shortTxt(res.base, NEED)}가 모자랐단다`}. 잔치는 해마다 열리는데 행운은 매번 오지 않지. 행운 없이도 채우는 방법을 찾아 다음 날 다시 해 보자.`) + autoHint(H); }
-        if (res.ok) { const left = res.after.fruit - NEED.fruit; return sayHTML('sage', `🎉 잔치에 필요한 양을 모두 채웠구나!${left ? ` 열매가 ${left}개 남았네.` : ' 딱 맞게 채웠어.'}`); }
+        tries.push({ made, rate, need, n: res.n, after: res.after, ok: res.ok });
+        if (res.ok) { const left = res.after.fruit - need.fruit; return sayHTML('sage', `🎉 잔치에 필요한 양을 모두 채웠구나!${left ? ` 열매가 ${left}개 남았네.` : ' 딱 맞게 채웠어.'}`); }
         H.fails++;
-        return sayHTML('sage', `${shortTxt(res.after, NEED)}가 모자라는구나. 다음 날 다시 해 보자. 시장 값은 날마다 바뀐단다.`) + autoHint(H);
+        return sayHTML('sage', `${shortTxt(res.after, need)}가 모자라는구나. 다음 날 다시 해 보자. 시장 값은 날마다 바뀐단다.`) + autoHint(H);
       }
     });
     if (r.ok) win = tries[tries.length - 1];
@@ -2361,17 +2362,15 @@ async function foxQuest() {
     day++;
     if (day > 1) toast(`🦊 여우 마을 ${day}일째`, 'gold', 2200);
     if (day === 2) await say('fox', '두 번째 날이니 손에 익었지? 오늘부터 물고기는 Ⓐ 한 번에 2마리씩 낚을 수 있어. 2마리에 2시간이야.');
-    const m = await workDay({ cost: HR.x, hours: HX, need: NX, at: 'fox', day });
+    const m = await workDay({ cost: HR.x, hours: HX, need: NX, at: 'fox', day, raise: true });
     await fadeTo(() => warp(11, 10, 'up'));
     return m;
   };
   for (;;) {
-    const m = await work(), b0 = noLuck(m), buy = Math.max(0, NX.fruit - m.fruit), idle = HX - b0.fish * HR.x.fish - b0.fruit * HR.x.fruit;
-    // 덤을 뺀 양으로도 주문을 채울 수 있었는지(토끼 마을에서 열매 1개 = 물고기 2마리로 사서)
-    const bbuy = Math.max(0, NX.fruit - b0.fruit), baseOk = b0.fish >= 2 * bbuy && b0.fish - 2 * bbuy >= NX.fish;
-    const luckLine = `그런데 행운의 덤 덕분이야. 덤이 없었다면 주문을 못 채웠어. 잔치는 해마다 열리는데 행운은 매번 오지 않잖아. 행운 없이도 되는 방법을 찾아보자.`;
+    // need: 행운의 덤만큼 손님이 늘어난 주문. idle: 쓰지 않은 시간(덤은 시간이 들지 않으므로 덤을 빼고 센다)
+    const m = await work(), need = raised(NX, m), b0 = noLuck(m), buy = Math.max(0, need.fruit - m.fruit), idle = HX - b0.fish * HR.x.fish - b0.fruit * HR.x.fruit;
+    if (hasLuck(m)) await say('fox', `행운의 덤 소문에 잔치 손님이 늘었어! 이번 주문은 ${amt('fish', need.fish)}와 ${amt('fruit', need.fruit)}야.`);
     if (!m.fish) { await say('fox', `물고기가 하나도 없네. 물고기는 1시간이면 잡는데, ${idle ? `남은 ${idle}시간을 그냥 보냈어.` : '열매 따느라 하루를 다 썼어.'}`); Dlg.close(); continue; }
-    if (!buy && m.fish >= NX.fish) { await say('fox', `행운의 덤으로 열매까지 다 모였네! ${luckLine}`); Dlg.close(); continue; }
     if (m.fish < 2 * buy) { await say('fox', `열매 ${buy}개를 사려면 물고기 ${2 * buy}마리가 필요한데 ${m.fish}마리뿐이네.${idle ? ` 남은 ${idle}시간에 물고기를 더 잡았으면 좋았을 텐데.` : ''} 다시 해 보자.`); Dlg.close(); continue; }
     let again = false;
     for (;;) {
@@ -2383,9 +2382,8 @@ async function foxQuest() {
         await say('gomi', '기회비용과 받는 값이 똑같으니 이득이 없었던 거야. 다른 마을을 골라 봐.');
         continue;
       }
-      const lack = NX.fish - (m.fish - 2 * buy);
+      const lack = need.fish - (m.fish - 2 * buy);
       if (lack > 0) { await say('fox', `토끼 마을이 열매 ${buy}개를 바꿔 줬어. 그런데 물고기가 ${lack}마리 모자라네. ${idle ? `남은 ${idle}시간에 물고기를 더 잡았으면 됐을 텐데…` : '열매 1개를 따는 3시간이면 물고기를 3마리나 잡을 수 있었는데…'}`); again = true; }
-      else if (!baseOk) { await say('fox', `토끼 마을이 열매 ${buy}개를 바꿔 줬어. 주문도 다 채웠지! ${luckLine}`); again = true; }
       break;
     }
     Dlg.close();
