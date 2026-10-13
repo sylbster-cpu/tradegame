@@ -124,6 +124,15 @@ button{font:inherit;color:inherit}
 .dpad [data-d=right]{grid-column:3;grid-row:2}.dpad [data-d=down]{grid-column:2;grid-row:3}
 .abtn{width:68px;height:68px;border-radius:50%;background:var(--grn);color:#fff;border:3px solid var(--frame);font-family:"Jua",sans-serif;font-size:1.5rem;touch-action:none}
 .abtn:active{transform:scale(.95)}
+/* 가로 화면: 방향키는 왼쪽, Ⓐ는 오른쪽 기둥에 두고 지도를 가운데에 크게 (아래 버튼 줄이 지도 높이를 먹지 않게) */
+@media (orientation:landscape){
+  .pad-on #app{display:grid;grid-template-columns:auto minmax(0,1fr) auto;grid-template-rows:auto minmax(0,1fr)}
+  .pad-on .hud{grid-column:1/-1}
+  .pad-on .stage{grid-column:2;grid-row:2}
+  .pad-on .pad{display:contents}
+  .pad-on .dpad{grid-column:1;grid-row:2;align-self:end;margin:0 6px 14px 12px}
+  .pad-on .abtn{grid-column:3;grid-row:2;align-self:end;margin:0 14px 22px 6px}
+}
 
 /* ===== 모달 ===== */
 .modal{position:fixed;inset:0;background:rgba(10,20,15,.55);display:flex;align-items:center;justify-content:center;padding:10px;z-index:40}
@@ -258,9 +267,39 @@ button.wk:hover{border-color:var(--grn)}
 .mr-cap{text-align:center;font-family:"Jua",sans-serif;font-size:1.1rem;margin:4px 0 10px}
 .mr-q{border-top:2px dashed var(--line);padding-top:8px}
 .mr-q .btn.wrong{text-decoration:line-through;opacity:.55}
+/* 거울 연못 선택지 3개: 좁은 화면은 한 줄에 하나, 넓은 화면은 한 줄에 셋 (2+1로 줄바꿈되지 않게) */
+.mr-q .row{display:grid;grid-template-columns:1fr}
+@media (min-width:560px){.mr-q .row{grid-template-columns:repeat(3,1fr)}}
 .sixth{display:inline-block;width:5.2em;height:auto}
 .sixth .cut{stroke:var(--fish);stroke-width:.18;stroke-dasharray:.6 .45}
 .cmp{margin:6px 0;padding:6px 12px;border-radius:12px;background:var(--grnbg);font-family:"Jua",sans-serif;line-height:1.5}
+/* 3장 시장판: ① 오늘 값 ② 직접 잡기와 시장 견주기 ③ 바꿀 횟수와 계산표 */
+.mk-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:0 12px}
+@media (min-width:700px){.mk-grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}
+.mk-step{border:2px solid var(--line);border-radius:14px;padding:8px 10px;margin:8px 0;background:var(--bg)}
+.mk-step h3{display:flex;align-items:center;gap:6px;margin:0 0 6px;font-size:1.08rem;color:var(--ink)}
+.mk-n{display:inline-grid;place-items:center;width:1.5em;height:1.5em;border-radius:50%;background:var(--grn);color:var(--paper);font-size:.85rem;flex:none}
+.mk-step .rate{margin:0}
+.mk-step .note{margin:6px 0 0}
+.mk-cmp{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0;padding:6px}
+.mk-opt{border-radius:10px;padding:6px 4px;background:var(--paper);text-align:center;font-size:.95rem;line-height:1.4}
+.mk-opt-h{font-size:1rem}
+.mk-opt-h small{font-size:.8rem;color:var(--muted)}
+.mk-ics{display:flex;flex-wrap:wrap;justify-content:center;gap:1px;margin:4px 0;min-height:1.4em}
+.mk-ics .ic{width:1.1em;height:1.1em}
+.mk-ics.faded .ic{opacity:.4}
+.mk-plan{margin:2px 0 6px}
+.mk-stop{color:var(--no)!important}
+.mk-tbl{width:100%;border-collapse:collapse;font-size:.98rem;margin-top:4px}
+.mk-tbl th,.mk-tbl td{border:1px solid var(--line);padding:5px 6px;text-align:center}
+.mk-tbl thead th{background:var(--paper);font-family:"Jua",sans-serif;font-weight:400;white-space:nowrap}
+.mk-tbl tbody th{text-align:left;font-family:"Jua",sans-serif;font-weight:400;background:var(--paper)}
+.mk-tbl tr.mk-sum td{font-family:"Jua",sans-serif;font-size:1.12rem;border-top:2px solid var(--frame)}
+.mk-tbl td.mk-good{color:var(--ok);background:var(--okbg);font-family:"Jua",sans-serif}
+.mk-tbl td.mk-bad{color:var(--no);background:var(--nobg);font-family:"Jua",sans-serif}
+.mk-btns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}
+.mk-btns .btn{width:100%}
+.mk-btns .wide{grid-column:1/-1}
 
 /* 심사판 */
 .stem{background:var(--bg);border-radius:12px;padding:10px 12px;font-size:.98rem}
@@ -292,11 +331,16 @@ td.win{background:var(--okbg);color:var(--ok);font-weight:700}
 /* 설정 */
 .menu-list{display:grid;gap:8px}
 .menu-list .btn{text-align:left}
-.chgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px}
+.chgrid{display:grid;grid-template-columns:1fr 1fr;gap:6px}   /* 장 4개를 어느 화면에서나 2×2로 */
+.chgrid .btn{padding:10px 8px}
 
 /* ===== 시작 화면 ===== */
-.title{position:fixed;inset:0;z-index:30;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:16px;text-align:center;background:radial-gradient(ellipse at 50% 30%,#BFE6F6,#7CC4E6 60%,#3E92C8);color:#13261C;overflow:auto}
+.title{position:fixed;inset:0;z-index:30;display:flex;flex-direction:column;align-items:center;gap:6px;padding:16px;text-align:center;background:radial-gradient(ellipse at 50% 30%,#BFE6F6,#7CC4E6 60%,#3E92C8);color:#13261C;overflow:auto}
 .title[hidden]{display:none}
+/* 가운데 맞춤은 위아래 auto 여백으로 한다. justify-content:center는 화면보다 길 때 위쪽이 잘려 스크롤로도 볼 수 없다 */
+.title>.t-hero{margin-top:auto}
+.title>.t-act{margin-bottom:auto}
+.t-hero,.t-act{display:flex;flex-direction:column;align-items:center;gap:6px;width:100%}
 .title .logo{width:min(9rem,40%);border-radius:8px;border:3px solid #2B3A33;box-shadow:3px 3px 0 rgba(0,0,0,.2)}
 .title h1{font-size:clamp(2rem,7vw,3.2rem);margin:6px 0 0;color:#0F5A28;text-shadow:2px 2px 0 #fff}
 .title .tag{font-family:"Jua",sans-serif;font-size:1.1rem;margin:0;color:#173A27}
@@ -304,19 +348,32 @@ td.win{background:var(--okbg);color:var(--ok);font-weight:700}
 .title .crew{display:flex;gap:6px;align-items:flex-end;justify-content:center}
 .title .crew img.m{width:56px;height:56px;image-rendering:pixelated;animation:bob 2.4s ease-in-out infinite}
 .title .crew img.m:nth-child(3){animation-delay:.4s}
-.title .btns{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:8px}
-.title .btn{font-size:1.3rem;padding:12px 26px}
+/* 버튼은 2×2 칸에 고정 */
+.title .tbtns{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:min(100%,24rem);margin-top:8px}
+.title .tbtns .btn{width:100%;font-size:1.2rem;padding:12px 6px;white-space:nowrap}
+.title .tbtns .wide{grid-column:1/-1}
 .title .btn.ghost{background:rgba(255,255,255,.7);color:#0F5A28;border-color:#0F5A28}
-.title .small-note{font-size:.85rem;color:#173A27;margin-top:8px}
+.title .small-note{font-size:.85rem;color:#173A27;margin:8px 0 0}
 .title .save-who{margin:8px 0 0;padding:6px 14px;border-radius:12px;background:rgba(255,255,255,.75);color:#13261C;line-height:1.45}
 .title .save-who small{font-size:.85rem;color:#173A27}
+/* 가로로 눕힌 휴대폰: 그림 쪽과 버튼 쪽을 나란히 */
+@media (orientation:landscape) and (max-height:560px){
+  .title{flex-direction:row;justify-content:center;align-items:flex-start;gap:28px;padding:10px 16px}
+  .title>.t-hero,.title>.t-act{margin:auto 0;width:auto;flex:0 1 24rem}
+  .title .logo{width:5.5rem}
+  .title h1{font-size:1.9rem;margin:2px 0 0}
+  .title .tag{font-size:1rem}
+  .title .yd{width:6rem;height:7.5rem}
+  .title .crew img.m{width:44px;height:44px}
+}
 .octable.nw th,.octable.nw td{white-space:nowrap}
 @keyframes bob{50%{transform:translateY(-6px)}}
 .fade{position:fixed;inset:0;background:#000;z-index:50;opacity:0;pointer-events:none;transition:opacity .35s}
 .fade.on{opacity:1}
 
 @media (prefers-reduced-motion: reduce){
-  *{animation-duration:.01s!important;animation-iteration-count:1!important;transition-duration:.01s!important}
+  /* transition-duration을 0보다 크게 하면 transition-property 기본값(all) 때문에 모든 속성 변화가 전환되어, 바뀐 직후 잰 위치·크기가 옛 값이 된다 */
+  *{animation-duration:.01s!important;animation-iteration-count:1!important;transition:none!important}
 }
 
 /* 좁은 휴대폰: 일꾼 칸이 한 줄에 둘씩 들어가게 */
@@ -334,6 +391,8 @@ td.win{background:var(--okbg);color:var(--ok);font-weight:700}
 .fishing.bite .bob{animation:pop .3s ease-out}
 @media (prefers-reduced-motion:reduce){.fishing .bob{animation:none}}
 @media (max-width:560px){.workbar{gap:2px 8px;padding:4px 8px;font-size:.88rem;top:4px}.workbar .wb-clock b{font-size:1.1rem}.workbar button{font-size:.8rem;padding:2px 8px}}
+/* 가로로 눕힌 휴대폰: 지도가 낮으니 작업 막대를 얇게 */
+@media (orientation:landscape) and (max-height:560px){.workbar{gap:0 8px;padding:2px 8px;font-size:.84rem;top:4px;line-height:1.35}.workbar .wb-clock b{font-size:1.05rem}.workbar button{font-size:.78rem;padding:1px 8px}.workbar .wb-msg{font-size:.8rem}}
 /* 행운 폭죽 */
 .fx{position:absolute;inset:0;pointer-events:none;z-index:8;overflow:hidden}
 .fx i{position:absolute;width:8px;height:8px;margin:-4px 0 0 -4px;border-radius:50%;opacity:0;animation:spark .9s ease-out forwards}
@@ -341,6 +400,16 @@ td.win{background:var(--okbg);color:var(--ok);font-weight:700}
 @keyframes spark{0%{opacity:1;transform:translate(0,0) scale(1.2)}100%{opacity:0;transform:translate(var(--dx),var(--dy)) scale(.4)}}
 @keyframes fxfade{0%,70%{opacity:1}100%{opacity:0}}
 .luck{color:var(--ok);font-weight:700}
+
+/* 가로로 눕힌 휴대폰: 높이가 낮아 카드와 대화창을 위아래로 쌓으면 서로 가린다. 카드는 왼쪽, 대화창은 오른쪽에 나란히 */
+@media (orientation:landscape) and (max-height:560px){
+  :root .dlg{max-height:calc(100dvh - var(--hud-h,50px) - 16px)}
+  :root .dlg-por{width:54px;height:54px}
+  :root .dlg-por img{width:48px;height:48px}
+  :root .dlg-por img.yd{width:46px;height:58px}
+  :root .stage.has-card .card-ov{position:fixed;top:calc(var(--hud-h,50px) + 6px);left:calc(8px + env(safe-area-inset-left,0px));transform:none;width:calc(50% - 12px);max-height:calc(100dvh - var(--hud-h,50px) - 14px)}
+  :root .stage.has-card .dlg{position:fixed;bottom:calc(8px + env(safe-area-inset-bottom,0px));left:auto;right:calc(8px + env(safe-area-inset-right,0px));transform:none;width:calc(50% - 12px);max-height:calc(100dvh - var(--hud-h,50px) - 14px)}
+}
 
 </style>
 </head>
@@ -1244,9 +1313,11 @@ function toastOnce(key, msg) { const now = Date.now(); if ((G.toastAt[key] || 0)
 function showCard(html) { let c = $('card'); if (!c) { c = document.createElement('div'); c.id = 'card'; c.className = 'card-ov'; $('stage').appendChild(c); } c.innerHTML = html; c.hidden = false; c.scrollTop = 0; $('stage').classList.add('has-card'); refit(); }
 function fitCard() {
   const c = $('card'); if (!c || c.hidden) return;
-  const d = $('dlg'), top = c.getBoundingClientRect().top;
-  const limit = (d.hidden ? $('stage').getBoundingClientRect().bottom : d.getBoundingClientRect().top) - top - 8;
-  c.style.maxHeight = Math.max(110, Math.floor(limit)) + 'px';
+  const d = $('dlg'), cr = c.getBoundingClientRect(), dr = d.hidden ? null : d.getBoundingClientRect();
+  // 가로로 눕힌 휴대폰에서는 카드(왼쪽)와 대화창(오른쪽)이 나란히 있으므로 화면 아래까지 쓴다
+  const side = dr && (dr.left >= cr.right - 1 || dr.right <= cr.left + 1);
+  const bottom = side ? innerHeight : dr ? dr.top : $('stage').getBoundingClientRect().bottom;
+  c.style.maxHeight = Math.max(110, Math.floor(bottom - cr.top - 8)) + 'px';
 }
 const refit = () => requestAnimationFrame(fitCard);
 window.addEventListener('resize', refit);
@@ -1719,31 +1790,51 @@ function ledgerMarket(tries, cur) {
     return `<tr class="${i === tries.length - 1 && cur === 'last' ? 'new' : ''} ${cur && cur.fish != null && t.made.fish === cur.fish ? 'cur' : ''}"><td>${i + 1}일</td><td>${stockTxt(t.made)}${luckTxt(t.made)}</td><td><span class="nw">${IC.fish}${a}=${IC.fruit}${b}</span></td><td>${t.n ? `<span class="nw">${IC.fruit}${b * t.n}→${IC.fish}${a * t.n}</span>` : '—'}</td><td>${shortIcon(t.after, t.need || NEED)}</td></tr>`; }).join('');
   return `<h3>📒 장부 (시장에 간 날 ${tries.length}일)</h3><div class="tw"><table class="ledger"><thead><tr><th>날</th><th>만든 양</th><th>그날 값</th><th>바꾼 것</th><th>결과</th></tr></thead><tbody>${body}</tbody></table></div>`;
 }
-/* cfg: made, rate, need(행운의 덤만큼 늘어난 필요량), hint, ledger(cur), onResult({n, after, ok}) → 말풍선 HTML */
+/* cfg: made, rate, need(행운의 덤만큼 늘어난 필요량), day(며칠째), hint, ledger(cur), onResult({n, after, ok}) → 말풍선 HTML
+   ① 오늘 값 → ② 물고기를 직접 잡을 때와 시장에서 바꿀 때 포기하는 열매를 그림으로 견줌(결론은 학생이 내림) → ③ 바꿀 횟수와 계산표 */
 function marketBoard(cfg) {
   return new Promise(resolve => {
     const [a, b] = cfg.rate, made = cfg.made, need = cfg.need || NEED;
-    const max = Math.min(Math.floor(made.fruit / b), Math.floor(BEAR_FISH / a));
+    const fruitMax = Math.floor(made.fruit / b), fishMax = Math.floor(BEAR_FISH / a), max = Math.min(fruitMax, fishMax);
     const after = n => ({ fish: made.fish + a * n, fruit: made.fruit - b * n });
     const OC = HR.r.fish / HR.r.fruit;   // 토끼 마을 물고기 1마리의 기회비용 (열매)
     const st = { n: 0, said: '', res: null };
     const sh = openModal(false);
+    const ics = (k, n, cls = '') => `<span class="mk-ics ${cls}">${IC[k].repeat(n)}</span>`;
+    const head = (no, t) => `<h3><span class="mk-n">${no}</span>${t}</h3>`;
+    const verdict = (k, have) => { const d = have - need[k]; return d < 0 ? `<td class="mk-bad">✖ ${-d}${GD[k].u} 모자라요</td>` : `<td class="mk-good">✔ ${d ? `${d}${GD[k].u} 남아요` : '딱 맞아요'}</td>`; };
     const render = () => {
-      const af = st.res ? st.res.after : after(st.n), p = new F(b, a);
-      const cmp = `<div class="cmp">직접 잡으면 물고기 1마리에 열매 ${OC}개 포기 · 🏪 오늘 시장에서는 열매 <span class="nw">${p.html()}개</span></div>`;
-      sh.innerHTML = `<h2>🏪 교역섬 시장</h2><p class="sub">곰 마을이 물고기를 가져와 열매와 바꾸려고 해요. 오늘 값은 이래요.</p>
-        <div class="rate"><small>오늘의 교환 비율</small><b>${rateTxt(cfg.rate)}</b><span class="note">물고기 ${a}마리를 받을 때마다 열매 ${b}개를 내요. 곰 마을 물고기는 ${BEAR_FISH}마리까지 있어요.</span></div>${cmp}
-        <div class="trade"><div class="trade-row">🎒 가져온 것 ${stockTxt(made)}${luckTxt(made)}</div>
-          ${st.res ? '' : `<div class="trade-row">🤝 바꿀 횟수 <span class="step"><button type="button" id="n-" aria-label="바꿀 횟수 줄이기" ${st.n <= 0 ? 'disabled' : ''}>−</button><output>${st.n}</output><button type="button" id="n+" aria-label="바꿀 횟수 늘리기" ${st.n >= max ? 'disabled' : ''}>+</button></span>번
-            <span class="note nw">${IC.fruit}${b * st.n} 내고 ${IC.fish}${a * st.n} 받기</span></div>
-            ${!max ? `<div class="trade-row res-no">열매가 ${made.fruit}개뿐이라 한 번도 바꿀 수 없어요.</div>` : ''}`}
-          <div class="out"><b>바꾼 뒤</b><span>${stockTxt(af)}</span></div>
-          <div class="need"><span class="note">잔치에 필요한 양${hasLuck(made) ? ' <span class="luck nw">🎊 덤만큼 손님이 늘었어요</span>' : ''}</span>${needChip('fish', af.fish, need.fish)}${needChip('fruit', af.fruit, need.fruit)}</div></div>
-        ${st.said}
-        <div class="row">${!st.res ? '<button type="button" class="btn" id="mk-go">🤝 이대로 하고 잔치 준비 마치기</button>'
-          : `<button type="button" class="btn" id="mk-next">${st.res.ok ? '다음 ▶' : '☀️ 다음 날 다시 일하기'}</button>`}
-        ${cfg.hint && !(st.res && st.res.ok) ? '<button type="button" class="btn ghost small" id="mk-hint">💬 동료에게 묻기</button>' : ''}
-        <button type="button" class="btn ghost small" id="mk-note">📒 수첩</button></div>
+      const n = st.res ? st.res.n : st.n, af = after(n), p = new F(b, a);
+      const L = made.luck || { fish: 0, fruit: 0 };
+      const stop = st.res ? '' : !max ? `<div class="trade-row res-no">열매가 ${made.fruit}개뿐이라 한 번도 바꿀 수 없어요.</div>`
+        : st.n >= max ? `<p class="note mk-stop">${fruitMax <= fishMax ? `남은 열매 ${af.fruit}개로는 더 바꿀 수 없어요(한 번에 ${b}개).` : `곰 마을 물고기는 오늘 ${BEAR_FISH}마리까지라 더 바꿀 수 없어요.`}</p>` : '';
+      const step1 = `<div class="mk-step">${head(1, '오늘 시장 값')}
+        <div class="rate"><b>${rateTxt(cfg.rate)}</b><span class="note">열매 ${b}개를 내면 물고기 ${a}마리를 받아요. 곰 마을 물고기는 오늘 ${BEAR_FISH}마리까지 있어요.</span></div></div>`;
+      const step2 = `<div class="mk-step">${head(2, `물고기 ${a}마리, 어떻게 얻을까?`)}
+        <div class="cmp mk-cmp">
+          <div class="mk-opt"><div class="mk-opt-h">🎣 직접 잡기 <small class="nw">${a * HR.r.fish}시간</small></div>${ics('fruit', a * OC, 'faded')}<div>그 시간에 딸 수 있던<br><b class="nw">열매 ${a * OC}개</b>를 포기</div></div>
+          <div class="mk-opt"><div class="mk-opt-h">🏪 시장에서 바꾸기</div>${ics('fruit', b)}<div>곰 마을에<br><b class="nw">열매 ${b}개</b>를 내요</div></div>
+        </div>
+        <p class="note">물고기 1마리로 치면 직접 잡기는 열매 ${OC}개 포기, 시장은 <span class="nw">열매 ${p.html()}개</span>. 어느 쪽이 열매를 덜 쓸까요?</p></div>`;
+      const step3 = `<div class="mk-step">${head(3, st.res ? '바꾼 결과' : '몇 번 바꿀까?')}
+        ${st.res ? '' : `<div class="trade-row mk-plan">🤝 <span class="step"><button type="button" id="n-" aria-label="바꿀 횟수 줄이기" ${st.n <= 0 ? 'disabled' : ''}>−</button><output>${st.n}</output><button type="button" id="n+" aria-label="바꿀 횟수 늘리기" ${st.n >= max ? 'disabled' : ''}>+</button></span>번 바꾸기
+          <span class="note nw">한 번에 ${IC.fruit}${b} → ${IC.fish}${a}</span></div>${stop}`}
+        <div class="tw"><table class="mk-tbl"><thead><tr><th></th><th>${IC.fish} 물고기</th><th>${IC.fruit} 열매</th></tr></thead><tbody>
+          <tr><th>🎒 가져온 것</th><td>${made.fish}</td><td>${made.fruit}</td></tr>
+          <tr><th>🤝 바꾸기 <span class="nw">${n}번</span></th><td>${n ? `+${a * n}` : '0'}</td><td>${n ? `−${b * n}` : '0'}</td></tr>
+          <tr class="mk-sum" id="mk-after"><th>바꾼 뒤</th><td>${af.fish}</td><td>${af.fruit}</td></tr>
+          <tr id="mk-need"><th>잔치에 필요</th><td>${need.fish}</td><td>${need.fruit}</td></tr>
+          <tr class="mk-res"><th>결과</th>${verdict('fish', af.fish)}${verdict('fruit', af.fruit)}</tr>
+        </tbody></table></div>
+        ${hasLuck(made) ? `<p class="note mk-luck">🍀 가져온 것에 행운의 덤 ${[L.fish ? `물고기 ${L.fish}마리` : '', L.fruit ? `열매 ${L.fruit}개` : ''].filter(Boolean).join('와 ')}가 들어 있어요. 덤 소문에 잔치 손님이 늘어 필요한 양도 그만큼 늘었어요.</p>` : ''}</div>`;
+      const hint = cfg.hint && !(st.res && st.res.ok);
+      const btns = `<div class="mk-btns">${!st.res ? '<button type="button" class="btn wide" id="mk-go">🤝 이대로 바꾸고 잔치 준비 마치기</button>'
+          : `<button type="button" class="btn wide" id="mk-next">${st.res.ok ? '다음 ▶' : '☀️ 다음 날 다시 일하기'}</button>`}
+        ${hint ? '<button type="button" class="btn ghost small" id="mk-hint">💬 동료에게 묻기</button>' : ''}
+        <button type="button" class="btn ghost small${hint ? '' : ' wide'}" id="mk-note">📒 수첩</button></div>`;
+      sh.innerHTML = `<h2>🏪 교역섬 시장${cfg.day ? ` <span class="note nw">${cfg.day}일째 저녁</span>` : ''}</h2>
+        <p class="sub">오늘 만든 것을 곰 마을 물고기와 바꿔 잔치 준비를 마쳐요.</p>
+        <div class="mk-grid"><div>${step1}${step2}</div><div>${step3}${st.said}${btns}</div></div>
         ${cfg.ledger(st.res ? 'last' : null)}`;
       const step = (id, d) => { const el = sh.querySelector(id); if (el) el.onclick = () => { sfx('sel'); st.n = clamp(st.n + d, 0, max); render(); const nb = sh.querySelector(id); if (nb && !nb.disabled) nb.focus(); }; };
       step('#n-', -1); step('#n\\+', 1);
@@ -2191,7 +2282,7 @@ async function ch3() {
     await fadeTo(() => warp(28, 19, 'up'));
     const rate = drawRate(tries);
     const r = await marketBoard({
-      made, rate, need, hint: H, ledger: cur => ledgerMarket(tries, cur),
+      made, rate, need, day: tries.length + 1, hint: H, ledger: cur => ledgerMarket(tries, cur),
       onResult: res => {
         tries.push({ made, rate, need, n: res.n, after: res.after, ok: res.ok });
         if (res.ok) { const left = res.after.fruit - need.fruit; return sayHTML('sage', `🎉 잔치에 필요한 양을 모두 채웠구나!${left ? ` 열매가 ${left}개 남았네.` : ' 딱 맞게 채웠어.'}`); }
@@ -2668,6 +2759,7 @@ function preset(ch) {
    화면 크기·그리기 루프
    ========================================================= */
 function resize() {
+  document.documentElement.style.setProperty('--hud-h', ($('hud').hidden ? 0 : $('hud').offsetHeight) + 'px');   // 가로 화면에서 카드·대화창을 머리 줄 아래에 둘 때 쓴다
   const st = $('stage'), r = st.getBoundingClientRect(); if (!r.width || !r.height) return;
   const aw = r.width - 10, ah = r.height - 10;
   const target = clamp(Math.min(aw, ah) / 9.5, 30, 64);
@@ -2677,6 +2769,8 @@ function resize() {
   cv.width = Math.round(VW * TILE * SC * DPR); cv.height = Math.round(VH * TILE * SC * DPR);
 }
 window.addEventListener('resize', resize);
+// 창 크기는 그대로인데 무대 크기만 바뀔 때(목표 문구가 두 줄이 되어 머리 줄이 높아질 때 등)도 지도를 다시 맞춘다
+if (window.ResizeObserver) { let q = 0; new ResizeObserver(() => { if (!q) q = requestAnimationFrame(() => { q = 0; resize(); refit(); }); }).observe($('stage')); }
 function updateMusic() {
   if (TITLE_ON) { music(null); return; }
   if (P.mode === 'boat') music('sea');
@@ -2806,14 +2900,15 @@ function showTitle() {
   $('hud').hidden = true; $('pad').hidden = true; Dlg.close(); hideCard();
   const sv = loadSave(), has = !!sv;
   const t = $('title'); t.hidden = false;
-  t.innerHTML = `<img class="logo" src="${LOGO}" alt="학교 마크">
+  // 버튼은 2×2 칸에 고정(기록이 없으면 '모험 시작'이 윗줄 두 칸을 차지). 가로 화면에서는 그림 쪽과 버튼 쪽을 나란히 둔다
+  t.innerHTML = `<div class="t-hero"><img class="logo" src="${LOGO}" alt="학교 마크">
     <h1>용돌이의 교역 모험</h1><p class="tag">섬과 섬을 잇는 견습 교역관이 되어 보자!</p>
-    <div class="crew"><img class="m" src="${PORT.rabbit}" alt=""><img class="yd" src="${PORT.yd}" alt="용돌이"><img class="m" src="${PORT.bear}" alt=""></div>
-    ${has ? `<p class="save-who">저장된 기록: <b>${CH_NAME[sv.ch] || ''}</b><br><small>내 기록이 아니면 <b>새로 시작</b>을 눌러요</small></p>` : ''}
-    <div class="btns">${has ? '<button type="button" class="btn" id="t-cont">▶ 이어하기</button><button type="button" class="btn ghost" id="t-new">새로 시작</button>' : '<button type="button" class="btn" id="t-new">▶ 모험 시작</button>'}
-    <button type="button" class="btn ghost" id="t-ch">👩‍🏫 장 선택</button></div>
-    <div class="btns"><button type="button" class="btn ghost small" id="t-snd" aria-pressed="${AU.on}">${AU.on ? '🔊 소리 켜짐' : '🔇 소리 꺼짐'}</button></div>
-    <p class="small-note">진행은 이 브라우저에 저장돼요.<br>교실에서는 이어폰을 쓰거나 소리를 끄고 해요.</p>`;
+    <div class="crew"><img class="m" src="${PORT.rabbit}" alt=""><img class="yd" src="${PORT.yd}" alt="용돌이"><img class="m" src="${PORT.bear}" alt=""></div></div>
+    <div class="t-act">${has ? `<p class="save-who">저장된 기록: <b>${CH_NAME[sv.ch] || ''}</b><br><small>내 기록이 아니면 <b>새로 시작</b>을 눌러요</small></p>` : ''}
+    <div class="tbtns">${has ? '<button type="button" class="btn" id="t-cont">▶ 이어하기</button><button type="button" class="btn ghost" id="t-new">새로 시작</button>' : '<button type="button" class="btn wide" id="t-new">▶ 모험 시작</button>'}
+    <button type="button" class="btn ghost" id="t-ch">👩‍🏫 장 선택</button>
+    <button type="button" class="btn ghost" id="t-snd" aria-pressed="${AU.on}">${AU.on ? '🔊 소리 켜짐' : '🔇 소리 꺼짐'}</button></div>
+    <p class="small-note">진행은 이 브라우저에 저장돼요.<br>교실에서는 이어폰을 쓰거나 소리를 끄고 해요.</p></div>`;
   const c = $('t-cont'); if (c) c.onclick = () => {
     ac(); sfx('sel'); startGame(loadSave());
   };
