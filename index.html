@@ -241,25 +241,6 @@ button.wk:hover{border-color:var(--grn)}
 .rate b{font-family:"Jua",sans-serif;font-weight:400;font-size:1.6rem;line-height:1.2}
 .octable tr.cur td{background:var(--midbg);font-weight:700}
 
-/* 하루 시계 (2장 시계 비교 카드) */
-.clock{display:block;width:min(300px,100%);height:auto;overflow:visible}
-.clock.small{width:96px}
-.clock .slot{fill:var(--paper);stroke:var(--line);stroke-width:1.5}
-.clock .pc path{stroke-width:2.5;stroke-linejoin:round}
-.clock .pc.fish path{fill:var(--fishbg);stroke:var(--fish)}
-.clock .pc.fruit path{fill:var(--fruitbg);stroke:var(--fruit)}
-.clock .pc .tick{stroke-width:1;stroke-dasharray:3 3;opacity:.6}
-.clock .pc.fish .tick{stroke:var(--fish)}
-.clock .pc.fruit .tick{stroke:var(--fruit)}
-.clocks{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;margin:6px 0}
-.clocks figure{margin:0;display:flex;flex-direction:column;align-items:center;gap:4px}
-.clocks figure>div,.clocks figure{min-width:0}
-.clocks figcaption{font-size:.85rem;text-align:center}
-.ccmp{display:flex;flex-direction:column;gap:2px;margin:4px 0 8px}
-.ccmp b{font-family:"Jua",sans-serif;font-weight:400}
-.ccmp .clocks{gap:14px;margin:0 0 6px}
-.ccmp .pair{display:flex;gap:4px}
-.ccmp .clock.small{width:80px}
 .note.center{text-align:center}
 /* 거울 연못 (1장 기회비용) */
 .mr{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0 4px}
@@ -329,7 +310,6 @@ td.win{background:var(--okbg);color:var(--ok);font-weight:700}
 .title .small-note{font-size:.85rem;color:#173A27;margin-top:8px}
 .title .save-who{margin:8px 0 0;padding:6px 14px;border-radius:12px;background:rgba(255,255,255,.75);color:#13261C;line-height:1.45}
 .title .save-who small{font-size:.85rem;color:#173A27}
-.octable.cert th,.octable.cert td{word-break:keep-all}
 .octable.nw th,.octable.nw td{white-space:nowrap}
 @keyframes bob{50%{transform:translateY(-6px)}}
 .fade{position:fixed;inset:0;background:#000;z-index:50;opacity:0;pointer-events:none;transition:opacity .35s}
@@ -1406,13 +1386,6 @@ function timeTable(hl, fox = true) {
     ${fox ? `<tr><th>🦊 여우 마을</th><td${hl ? ' class="win"' : ''}>${HR.x.fish}시간</td><td>${HR.x.fruit}시간</td></tr>` : ''}</tbody></table></div>
     <p class="note">하루에 일하는 시간: 토끼·곰 마을 ${DAY_H}시간${fox ? ', 여우 마을 6시간' : ''}</p>`;
 }
-/* 1개를 만드는 시간을 하루 시계로 비교: 토끼 마을 물고기는 시계 절반, 곰 마을 열매는 시계 두 바퀴 */
-function clockCompare() {
-  const one = (v, k) => { const len = HR[v][k], n = Math.ceil(len / DAY_H);
-    return `<div class="pair">${Array.from({ length: n }, (_, i) => clockSVG([{ k, len: Math.min(DAY_H, len - i * DAY_H) }], DAY_H, { small: true })).join('')}</div>`; };
-  const cell = (v, k) => `<figure>${one(v, k)}<figcaption>${GN[k]} ${k === 'fish' ? '1마리' : '1개'}<br>${HR[v][k]}시간${HR[v][k] > DAY_H ? ' (두 바퀴)' : ''}</figcaption></figure>`;
-  return `<div class="ccmp"><b>🐰 토끼 마을</b><div class="clocks">${cell('r', 'fish')}${cell('r', 'fruit')}</div><b>🐻 곰 마을</b><div class="clocks">${cell('b', 'fish')}${cell('b', 'fruit')}</div></div>`;
-}
 /* 같은 두 마을을 24시간 동안의 최대 생산량으로 적은 표 (시험지 형식) */
 function prodTable() {
   const n = (v, k) => 24 / HR[v][k];
@@ -1484,32 +1457,6 @@ function openHint(H) {
 function autoHint(H) {
   if (!H.auto || H.i >= H.list.length || H.fails < H.auto * (H.i + 1)) return '';
   const [w, t] = H.list[H.i++]; return sayHTML(w, t, 'hint');
-}
-
-/* =========================================================
-   하루 시계 그림 (2장 시계 비교 카드)
-   ========================================================= */
-const GN = { fish: '물고기', fruit: '열매' };
-const pixAt = (k, x, y, w) => IC[k].replace('<svg class="ic"', `<svg x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${w}" height="${w}"`);
-/* 하루 시계 SVG. pieces = [{ k, len }]를 12시 방향부터 시계 방향으로 차례로 그리고, 남은 칸은 빈칸으로 둔다 */
-function clockSVG(pieces, hours, o = {}) {
-  const R = 100, r = 40, ang = t => t / hours * 2 * Math.PI;
-  const pt = (a, d) => `${(Math.sin(a) * d).toFixed(2)} ${(-Math.cos(a) * d).toFixed(2)}`;
-  const arc = (s, e) => {
-    if (e - s >= hours) return `M0 ${-R}A${R} ${R} 0 1 1 0 ${R}A${R} ${R} 0 1 1 0 ${-R}ZM0 ${-r}A${r} ${r} 0 1 0 0 ${r}A${r} ${r} 0 1 0 0 ${-r}Z`;
-    const a0 = ang(s), a1 = ang(e), big = e - s > hours / 2 ? 1 : 0;
-    return `M${pt(a0, R)}A${R} ${R} 0 ${big} 1 ${pt(a1, R)}L${pt(a1, r)}A${r} ${r} 0 ${big} 0 ${pt(a0, r)}Z`;
-  };
-  let h = 0, g = '';
-  pieces.forEach(p => {
-    const s = h, e = Math.min(hours, h + p.len); h = e; if (e <= s) return;
-    const mid = ang((s + e) / 2), d = (R + r) / 2, w = e - s > 1 ? 34 : 20;
-    const cx = Math.sin(mid) * d, cy = -Math.cos(mid) * d;
-    let ticks = ''; for (let t = s + 1; t < e; t++) ticks += `<path class="tick" d="M${pt(ang(t), r)}L${pt(ang(t), R)}"/>`;
-    g += `<g class="pc ${p.k}"><path d="${arc(s, e)}" fill-rule="evenodd"/>${ticks}${pixAt(p.k, cx - w / 2, cy - w / 2, w)}</g>`;
-  });
-  for (let t = h; t < hours; t++) g += `<path class="slot" d="${arc(t, t + 1)}"/>`;
-  return `<svg class="clock${o.small ? ' small' : ''}" viewBox="-104 -104 208 208" role="img" aria-label="${o.aria || `하루 ${hours}시간 시계`}">${g}</svg>`;
 }
 
 /* =========================================================
@@ -2123,7 +2070,7 @@ function examBoard(plan = EXAM_PLAN, mini = false) {
       if (st.k >= qs.length) {
         const sc = st.res.filter(Boolean).length;
         sh.innerHTML = `<h2>${mini ? '📝 시험지 연습 결과' : '🦁 심사 결과'}</h2><div class="dots">${dots}</div><p class="j" style="font-size:1.6rem;margin:12px 0">${qs.length}장 중 ${sc}장을 바르게 판정했어요.</p>
-          <p>${mini ? '이 결과는 인증서에 적혀요.' : sc >= EXAM_PASS ? `수석 교역관 기준(${EXAM_PASS}장)을 넘었어요!` : `${EXAM_PASS}장 이상이면 통과예요. 수첩을 보고 다시 도전해요.`}</p>
+          <p>${mini ? '틀린 장은 수첩의 시험지 읽는 법을 다시 보세요.' : sc >= EXAM_PASS ? `수석 교역관 기준(${EXAM_PASS}장)을 넘었어요!` : `${EXAM_PASS}장 이상이면 통과예요. 수첩을 보고 다시 도전해요.`}</p>
           <div class="row"><button type="button" class="btn" id="ex-done">확인</button></div>`;
         sh.querySelector('#ex-done').onclick = () => { sfx('sel'); closeModal(); resolve({ score: sc }); };
         return;
@@ -2194,7 +2141,7 @@ async function sceneBearArrive() {
 }
 async function ch2() {
   await say('bchief', '겨울을 나려면 열매가 넉넉해야 하는데, 우리 마을은 열매 따기가 영 서툴러.');
-  showCard(`<h3>1개를 만드는 데 드는 시간</h3>${clockCompare()}${timeTable(false, false)}`);
+  showCard(`<h3>🐰 토끼 마을과 🐻 곰 마을 비교</h3>${timeTable(false, false)}`);
   await say('bchief', `우리 마을 일꾼은 물고기 1마리를 잡는 데 ${HR.b.fish}시간, 열매 1개를 따는 데 ${HR.b.fruit}시간이나 걸리지.`);
   await quiz('tori', '물건 1개를 더 짧은 시간에 만드는 마을은?', ['물고기도 열매도 토끼 마을', '물고기도 열매도 곰 마을', '물고기는 곰 마을, 열매는 토끼 마을'], 0,
     { 1: '곰 마을은 물고기 12시간, 열매 24시간이야. 토끼 마을은 6시간, 1시간.', 2: '물고기도 토끼 마을이 6시간으로 곰 마을 12시간보다 빨라.' });
@@ -2306,7 +2253,7 @@ async function festival() {
   S.f.festival = true; S.ch = 4; S.stats.tMain = S.stats.t; S.stats.at = Date.now(); save();
   liftFog('fox'); liftFog('fair');
   await say('sage', '본편은 여기까지란다. 시간이 남으면 선택 활동을 해 보렴. 교역섬 시장, 북서쪽 여우섬, 북쪽 박람회섬, 북동쪽 쌍둥이섬에서 교역관을 기다린단다.');
-  Dlg.close(); certificate();
+  Dlg.close(); toast('🎉 본편을 마쳤어요! 남은 시간에는 선택 활동을 해 보세요.', 'gold', 4200);
 }
 
 /* 잔치 끝: 섬에서 한 일을 시험지 형식으로 옮겨 읽고 두 장을 풀어 본다 */
@@ -2427,36 +2374,8 @@ async function examQuest() {
   await say('lion', `${r.score}개를 바르게 판정했군! 훌륭하네. 이 박람회 트로피를 받게.`);
   toast('🏆 박람회 트로피를 받았다!', 'gold', 3600);
   S.f.c6done = true; save();
-  Dlg.close(); certificate();
+  Dlg.close();
 }
-function certificate() {
-  const st = S.stats || {}, mins = t => `약 ${Math.max(1, Math.round((t || 0) / 60000))}분`;
-  const when = t => { const d = new Date(t); return `${d.getMonth() + 1}월 ${d.getDate()}일 ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`; };
-  const opt = (done, label, extra = '') => `<tr><th>${label}</th><td>${done ? '✅ 완료' : '—'}${extra}</td></tr>`;
-  const pre = CH_PRESET.find(c => c.ch === S.f.preset);
-  const sh = openModal(true);
-  sh.innerHTML = `${xBtn}<div style="text-align:center"><img src="${LOGO}" alt="학교 마크" style="width:7rem;border-radius:8px;border:3px solid var(--frame)">
-    <h2 style="padding:0;margin-top:10px">${S.f.c6done ? '🏆 수석 교역관 인증서' : '🎖️ 교역관 인증서'}</h2>
-    <p class="j" style="font-size:1.15rem">이 화면을 선생님께 보여 주세요.</p></div>
-    <div class="tw"><table class="octable cert"><tbody>
-    <tr><th>본편 (1~3장)</th><td>${S.f.festival ? `✅ 완료 · ${mins(st.tMain)}` : '진행 중'}</td></tr>
-    ${st.at ? `<tr><th>본편을 마친 때</th><td>${when(st.at)}</td></tr>` : ''}
-    <tr><th>시험지 연습</th><td>${st.mini != null ? `${st.mini} / ${EXAM_MINI.length}장 바르게 판정` : '-'}</td></tr>
-    <tr><th>한 번에 맞힌 질문</th><td>${(st.q || 0) - (st.qw || 0)} / ${st.q || 0}</td></tr>
-    <tr><th>풀이 힌트를 본 횟수</th><td>${st.hint || 0}번</td></tr>
-    <tr><th>3장 시장에 간 날</th><td>${st.c3 ?? '-'}${st.c3 != null ? '일' : ''}</td></tr>
-    <tr><th>잔치 준비 날 시장 값</th><td>${S.deal ? rateWords([S.deal.a, S.deal.b]) : '-'}</td></tr>
-    ${opt(S.f.marketDone, '선택 · 시장 운영', S.market ? (S.market.best ? ` · 굶은 날 ${S.market.best}번` : ' · 굶은 날 없음') : '')}
-    ${opt(S.f.c5done, '선택 · 여우섬')}
-    ${opt(S.f.c6done, '선택 · 박람회 심사', S.exam != null ? ` (최고 ${S.exam}/5)` : '')}
-    ${opt(S.f.twinsDone, '선택 · 쌍둥이섬')}
-    <tr><th>숨은 메모</th><td>${S.memos.length} / ${MEMOS.length}</td></tr>
-    <tr><th>전체 걸린 시간</th><td>${mins(st.t)}</td></tr>
-    ${pre ? `<tr><th>장 선택</th><td class="res-no">${pre.t}부터 시작함</td></tr>` : ''}</tbody></table></div>
-    <div class="row center"><button type="button" class="btn" data-close>섬 둘러보기</button></div>`;
-  bindClose(sh);
-}
-
 /* --- 숨은 이야기: 쌍둥이섬 --- */
 async function twins() {
   await say('henchief', '꼬꼬, 소문난 교역관! 우리 닭섬과 건너편 다람쥐섬도 토끼·곰 마을처럼 나눠 맡고 바꾸면 더 넉넉해질까?');
@@ -2683,7 +2602,6 @@ function openMenu() {
       ${'vibrate' in navigator ? `<button type="button" class="btn ghost" id="m-vib">${VIEW.vib !== false ? '📳 진동 끄기' : '📴 진동 켜기'}</button>` : ''}
       <button type="button" class="btn ghost" id="m-pad">🎮 화면 버튼: ${{ auto: '자동', on: '항상 보이기', off: '숨기기' }[VIEW.pad]}</button>
       ${S.f.boat && P && P.mode === 'land' && canControlIgnoringModal() ? '<button type="button" class="btn ghost" id="m-sail">⛵ 빠른 항해</button>' : ''}
-      ${S.f.festival ? '<button type="button" class="btn ghost" id="m-cert">📜 학습 기록 보기</button>' : ''}
       <button type="button" class="btn ghost" id="m-help">❓ 조작 방법</button>
       <button type="button" class="btn ghost" id="m-ch">👩‍🏫 장 선택 (교사용)</button>
       <button type="button" class="btn ghost" id="m-title">🏠 처음 화면으로</button>
@@ -2696,7 +2614,6 @@ function openMenu() {
   sh.querySelector('#m-pad').onclick = () => { VIEW.pad = { auto: 'on', on: 'off', off: 'auto' }[VIEW.pad]; applyView(); closeModal(); openMenu(); };
   const sail = sh.querySelector('#m-sail'); if (sail) sail.onclick = () => { closeModal(); fastTravel(); };
   sh.querySelector('#m-help').onclick = () => { closeModal(); helpModal(); };
-  const cert = sh.querySelector('#m-cert'); if (cert) cert.onclick = () => { closeModal(); certificate(); };
   sh.querySelector('#m-ch').onclick = () => { closeModal(); chapterModal(); };
   sh.querySelector('#m-title').onclick = () => { closeModal(); save(); showTitle(); };
 }
