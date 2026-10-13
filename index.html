@@ -106,7 +106,7 @@ button{font:inherit;color:inherit}
 .pad-on .stage.has-card .dlg{max-height:62vh}
 
 /* ===== 알림 ===== */
-.toast-wrap{position:absolute;left:0;right:0;top:10px;display:flex;flex-direction:column;align-items:center;gap:6px;pointer-events:none;z-index:6}
+.toast-wrap{position:absolute;left:0;right:0;top:10px;display:flex;flex-direction:column;align-items:center;gap:6px;pointer-events:none;z-index:9}
 .toast{background:var(--frame);color:var(--paper);padding:7px 14px;border-radius:12px;font-family:"Jua",sans-serif;font-size:1rem;box-shadow:2px 2px 0 var(--shadow);animation:tin .3s ease-out both;max-width:92%;text-align:center}
 .toast.gold{background:var(--sun);color:#2B2208}
 @keyframes tin{from{opacity:0;transform:translateY(-8px)}}
@@ -117,7 +117,9 @@ button{font:inherit;color:inherit}
 .pad[hidden]{display:none}
 .dpad{display:grid;grid-template-columns:repeat(3,52px);grid-template-rows:repeat(3,46px);gap:2px}
 .dpad button{background:var(--paper);border:2px solid var(--frame);border-radius:10px;font-size:1.1rem;color:var(--ink);touch-action:none}
-.dpad button:active,.dpad button.on{background:var(--grnbg)}
+.dpad{touch-action:none}
+.dpad button{pointer-events:none}
+.dpad button.on{background:var(--grnbg);transform:scale(.96)}
 .dpad [data-d=up]{grid-column:2;grid-row:1}.dpad [data-d=left]{grid-column:1;grid-row:2}
 .dpad [data-d=right]{grid-column:3;grid-row:2}.dpad [data-d=down]{grid-column:2;grid-row:3}
 .abtn{width:68px;height:68px;border-radius:50%;background:var(--grn);color:#fff;border:3px solid var(--frame);font-family:"Jua",sans-serif;font-size:1.5rem;touch-action:none}
@@ -352,6 +354,13 @@ td.win{background:var(--okbg);color:var(--ok);font-weight:700}
 .fishing.bite .bob{animation:pop .3s ease-out}
 @media (prefers-reduced-motion:reduce){.fishing .bob{animation:none}}
 @media (max-width:560px){.workbar{gap:2px 8px;padding:4px 8px;font-size:.88rem;top:4px}.workbar .wb-clock b{font-size:1.1rem}.workbar button{font-size:.8rem;padding:2px 8px}}
+/* 행운 폭죽 */
+.fx{position:absolute;inset:0;pointer-events:none;z-index:8;overflow:hidden}
+.fx i{position:absolute;width:8px;height:8px;margin:-4px 0 0 -4px;border-radius:50%;opacity:0;animation:spark .9s ease-out forwards}
+.fx b{position:absolute;margin:-.6em 0 0 -.6em;font-size:2.4rem;line-height:1.2;font-weight:400;animation:pop .4s ease-out,fxfade 1.5s ease-in forwards}
+@keyframes spark{0%{opacity:1;transform:translate(0,0) scale(1.2)}100%{opacity:0;transform:translate(var(--dx),var(--dy)) scale(.4)}}
+@keyframes fxfade{0%,70%{opacity:1}100%{opacity:0}}
+.luck{color:var(--ok);font-weight:700}
 
 </style>
 </head>
@@ -979,7 +988,7 @@ function drawBoat(g, X, Y, t, crew) {
    ========================================================= */
 const DIRS = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
 let P = null;
-const G = { busy: 0, fade: false, toastAt: {}, tap: null, tapPtr: null, cam: { x: 0, y: 0 } };
+const G = { busy: 0, fade: false, toastAt: {}, tap: null, tapPtr: null, cam: { x: 0, y: 0 }, luck: window.__ydLuck || null };   // luck: 점검에서 행운 확률을 고정할 때
 
 const NPCS = [
   { id: 'sage', who: 'sage', spr: 'turtle', at: () => festivalTime() ? [11, 30] : S.ch >= 3 ? [28, 17] : [12, 25], talk: () => talkSage() },
@@ -1449,6 +1458,9 @@ const rateTxt = ([a, b]) => `<span class="nw">${IC.fish} ${a}</span> = <span cla
 const rateWords = ([a, b]) => `물고기 ${a}마리 = 열매 ${b}개`;
 const stockTxt = s => `<span class="nw">${IC.fish}${s.fish} ${IC.fruit}${s.fruit}</span>`;
 const shortTxt = (a, n) => { const s = []; if (a.fish < n.fish) s.push(`물고기 ${n.fish - a.fish}마리`); if (a.fruit < n.fruit) s.push(`열매 ${n.fruit - a.fruit}개`); return s.join('와 '); };
+/* 행운의 덤: 만든 양에서 덤을 뺀 양, 덤 표시 */
+const noLuck = m => { const L = m.luck || { fish: 0, fruit: 0 }; return { fish: m.fish - L.fish, fruit: m.fruit - L.fruit }; };
+const luckTxt = m => { const L = m.luck; return L && (L.fish || L.fruit) ? ` <small class="nw luck">🍀 덤 ${L.fish ? IC.fish + L.fish : ''}${L.fruit ? IC.fruit + L.fruit : ''}</small>` : ''; };
 /* 부족한 양을 아이콘으로 짧게: 🐟1 · 🍎2 부족 */
 function shortIcon(a, n) {
   const s = []; if (a.fish < n.fish) s.push(`${IC.fish}${n.fish - a.fish}`); if (a.fruit < n.fruit) s.push(`${IC.fruit}${n.fruit - a.fruit}`);
@@ -1503,6 +1515,7 @@ function clockSVG(pieces, hours, o = {}) {
    ========================================================= */
 const TREE_FRUIT = 4;   // 나무 한 그루에서 하루에 딸 수 있는 열매
 const HOLD_FIRST = 420, HOLD_EVERY = 320;   // Ⓐ 길게 누르기: 처음 기다리는 시간, 이어서 하는 간격(ms)
+const LUCK_P = .08;   // 채취 한 번에 행운이 터질 확률. 행운이면 한 번에 2~4개를 얻고, 평소보다 더 얻은 덤은 시간이 들지 않는다
 function redrawTile(x, y) { const g = terr.getContext('2d'); g.imageSmoothingEnabled = false; drawTile(g, x, y); }
 function warp(x, y, dir = 'down') {
   P.mode = 'land'; P.x = x; P.y = y; P.px = x * TILE; P.py = y * TILE; P.moving = false; P.path = null; P.dir = dir;
@@ -1515,13 +1528,13 @@ function workDay(cfg) {
   return new Promise(resolve => {
     const saved = G.busy; G.busy = 0; Dlg.close(); hideCard();
     const day = cfg.day || 1, short = cfg.cost.fish <= cfg.cost.fruit ? 'fish' : 'fruit';
-    G.work = { at: 'rabbit', ...cfg, day, short, per: day >= 2 ? 2 : 1, hours: cfg.hours || DAY_H, used: 0, bag: { fish: 0, fruit: 0 }, picks: new Map(), fishing: null,
+    G.work = { at: 'rabbit', ...cfg, day, short, per: day >= 2 ? 2 : 1, hours: cfg.hours || DAY_H, used: 0, bag: { fish: 0, fruit: 0 }, luck: { fish: 0, fruit: 0 }, picks: new Map(), fishing: null,
       msg: TOUCH ? '💡 나무나 바다를 누르면 그 앞으로 가서 일해요. 길게 누르면 이어서 해요.' : '💡 Ⓐ를 길게 누르면 이어서 해요.',
       finish: () => {
         const w = G.work; if (!w) return;
         if (w.fishing) clearTimeout(w.fishing.timer);
         restoreTrees(w); AH.block = AH.on; AH.on = false;
-        G.work = null; workBar(); G.busy = saved; updateHUD(); resolve({ ...w.bag });
+        G.work = null; workBar(); G.busy = saved; updateHUD(); resolve({ ...w.bag, luck: { ...w.luck } });
       } };
     workBar(); updateHUD();
   });
@@ -1534,23 +1547,59 @@ const isWorkTree = (x, y) => !!G.work && WORK_PLACES[G.work.at].trees.some(([a, 
 const howMany = (w, k, cap = Infinity) => Math.min(k === w.short ? w.per : 1, Math.floor(workLeft() / w.cost[k]), cap);
 function workBar() {
   let b = $('workbar');
-  if (!G.work) { if (b) b.remove(); const f = $('fishing'); if (f) f.remove(); return; }
+  if (!G.work) { if (b) b.remove(); const f = $('fishing'); if (f) f.remove(); $('toasts').style.top = ''; return; }
   if (!b) { b = document.createElement('div'); b.id = 'workbar'; b.className = 'workbar'; $('stage').appendChild(b); }
   const w = G.work, left = workLeft(), n = w.need;
   b.innerHTML = `<span class="wb-clock">⏰ <b>${left}</b>시간 남음</span><span class="nw">🎒 ${IC.fish}${w.bag.fish} ${IC.fruit}${w.bag.fruit}</span>
     ${n ? `<span class="nw">📜 ${IC.fish}${w.bag.fish}/${n.fish} ${IC.fruit}${w.bag.fruit}/${n.fruit}</span>` : ''}
     ${w.info || ''}${w.per > 1 ? `<span class="nw wb-x2">✋ ${IC[w.short]} ${w.per}${GD[w.short].u}씩</span>` : ''}
     <button type="button" id="wb-end">🌙 일 마치기</button>${w.msg ? `<span class="wb-msg" aria-live="polite">${w.msg}</span>` : ''}`;
+  $('toasts').style.top = `${b.offsetTop + b.offsetHeight + 6}px`;   // 알림이 작업 막대에 가리지 않게 그 아래에 띄운다
   $('wb-end').onclick = () => { sfx('sel'); if (!G.work || G.work.fishing) return; if (left && !confirm(`남은 ${left}시간을 쓰지 않고 오늘 일을 마칠까요?`)) return; endWork(); };
 }
 function workSay(msg, snd) { if (!G.work) return; G.work.msg = msg; if (snd) sfx(snd); workBar(); }
 function endWork() { if (!G.work) return; toast('🌙 해가 졌어요.', 'gold', 2200); G.work.finish(); }
-function spend(k, n, note = '') {
-  const w = G.work; w.used += w.cost[k] * n; w.bag[k] += n;
+/* 행운 굴리기: 평소 n개를 얻을 때, LUCK_P 확률로 평소보다 많은 2~4개. G.luck = { p, n }이면 확률·개수를 고정(점검용) */
+function luckRoll(n) {
+  const L = G.luck, p = L ? L.p : LUCK_P, lo = Math.max(2, n + 1);
+  if (lo > 4 || Math.random() >= p) return n;
+  return L && L.n ? clamp(L.n, lo, 4) : lo + Math.floor(Math.random() * (5 - lo));
+}
+/* 시간 n개만큼 쓰고 got개를 얻는다(got > n이면 행운) */
+function spend(k, n, note = '', got = n) {
+  const w = G.work, extra = got - n; w.used += w.cost[k] * n; w.bag[k] += got; w.luck[k] += extra;
   AH.next = Math.max(AH.next, performance.now() + HOLD_EVERY);
-  workSay(`${IC[k]} +${n} <small>(${w.cost[k] * n}시간)${note}</small>`, 'ok');
+  if (extra > 0) { workSay(`🎉 ${IC[k]} +${got} <small>(${w.cost[k] * n}시간 · 행운의 덤 ${extra}${GD[k].u})${note}</small>`); celebrate(k, got); }
+  else workSay(`${IC[k]} +${n} <small>(${w.cost[k] * n}시간)${note}</small>`, 'ok');
   if (workLeft() <= 0) setTimeout(endWork, 450);
 }
+/* 행운 알림: 시스템 알림, 폭죽, 소리, 진동 */
+function celebrate(k, got) {
+  toast(`🎉 행운! ${GD[k].n} ${got}${GD[k].u}를 한 번에 ${k === 'fish' ? '낚았어요' : '땄어요'}!`, 'gold', 3000);
+  sfx('win'); fireworks(); buzz([70, 50, 70, 50, 180]);
+}
+/* 지금 카메라 위치(그리기 전이라도 render와 같은 식으로 바로 계산) */
+function camNow() {
+  const vw = VW * TILE, vh = VH * TILE;
+  return { x: clamp(P.px + TILE / 2 - vw / 2, 0, W * TILE - vw), y: clamp(P.py + TILE / 2 - vh / 2, 0, H * TILE - vh), vw, vh };
+}
+function fireworks() {
+  const st = $('stage'), sr = st.getBoundingClientRect(), r = cv.getBoundingClientRect(), cam = camNow(), k = r.width / cam.vw;
+  const x = r.left - sr.left + (P.px + TILE / 2 - cam.x) * k, y = r.top - sr.top + (P.py - cam.y) * k;
+  const fx = document.createElement('div'); fx.className = 'fx'; fx.setAttribute('aria-hidden', 'true'); st.appendChild(fx);
+  const COL = ['#FFD23F', '#FF6B6B', '#4ECDC4', '#A78BFA', '#7BD389', '#FF9F1C'];
+  if (!RM) [[0, -50, 0], [-70, -100, 230], [70, -90, 430]].forEach(([ox, oy, delay]) => {
+    for (let i = 0; i < 16; i++) {
+      const a = i / 16 * 2 * Math.PI + Math.random() * .3, d = 38 + Math.random() * 34, sp = document.createElement('i');
+      sp.style.cssText = `left:${(x + ox).toFixed(0)}px;top:${(y + oy).toFixed(0)}px;--dx:${(Math.cos(a) * d).toFixed(0)}px;--dy:${(Math.sin(a) * d).toFixed(0)}px;background:${COL[i % COL.length]};animation-delay:${delay}ms`;
+      fx.appendChild(sp);
+    }
+  });
+  const em = document.createElement('b'); em.textContent = '🎉'; em.style.cssText = `left:${x.toFixed(0)}px;top:${(y - 24).toFixed(0)}px`; fx.appendChild(em);
+  setTimeout(() => fx.remove(), 1600);
+}
+/* 진동: 안드로이드 휴대폰·태블릿에서만 된다(아이폰·아이패드 사파리는 진동 기능이 없다). 설정에서 끌 수 있다 */
+function buzz(pattern) { if (VIEW.vib === false) return; try { if (navigator.vibrate) navigator.vibrate(pattern); } catch (e) { /* 무시 */ } }
 /* 일하는 동안의 Ⓐ. 일을 했으면 true */
 function workAct(tx, ty) {
   const w = G.work, left = workLeft(), t = tAt(tx, ty), key = `${tx},${ty}`;
@@ -1558,9 +1607,9 @@ function workAct(tx, ty) {
   if (isWorkTree(tx, ty)) {
     if (t !== T.FRUIT) { workSay('이 나무는 오늘 다 땄어요. 다른 나무로 가 보세요.', 'no'); return false; }
     if (left < w.cost.fruit) { workSay(`열매를 따려면 ${w.cost.fruit}시간이 필요해요. 남은 시간은 ${left}시간뿐이에요.`, 'no'); return false; }
-    const had = w.picks.get(key) || 0, n = howMany(w, 'fruit', TREE_FRUIT - had), c = had + n; w.picks.set(key, c);
+    const had = w.picks.get(key) || 0, n = howMany(w, 'fruit', TREE_FRUIT - had), got = luckRoll(n), c = Math.min(TREE_FRUIT, had + got); w.picks.set(key, c);
     if (c >= TREE_FRUIT) { setT(tx, ty, T.TREE); redrawTile(tx, ty); }
-    spend('fruit', n, c >= TREE_FRUIT ? ' · 이 나무는 다 땄어요' : ` · 이 나무에 ${TREE_FRUIT - c}개 남음`); return true;
+    spend('fruit', n, c >= TREE_FRUIT ? ' · 이 나무는 다 땄어요' : ` · 이 나무에 ${TREE_FRUIT - c}개 남음`, got); return true;
   }
   if (isWaterT(t) && tAt(P.x, P.y) === T.PIER && P.island && P.island.id === w.at) {
     if (left < w.cost.fish) { workSay(`물고기를 잡으려면 ${w.cost.fish}시간이 필요해요. 남은 시간은 ${left}시간뿐이에요.`, 'no'); return false; }
@@ -1608,7 +1657,7 @@ function startFishing() {
   let f = $('fishing'); if (!f) { f = document.createElement('div'); f.id = 'fishing'; f.className = 'fishing'; f.setAttribute('aria-live', 'assertive'); $('stage').appendChild(f); }
   f.onpointerdown = e => { e.preventDefault(); ac(); fishTap(); aDown(e.pointerId); };
   // 용돌이를 가리지 않게: 용돌이가 화면 아래쪽에 있으면 그 위에, 가운데나 위쪽이면 그 아래에 띄운다
-  const vh = VH * TILE, cy = clamp(P.py + TILE / 2 - vh / 2, 0, H * TILE - vh), fy = (P.py + TILE / 2 - cy) / vh;   // 그리기 전이라도 카메라 위치를 바로 계산
+  const cam = camNow(), fy = (P.py + TILE / 2 - cam.y) / cam.vh;
   f.style.top = `${Math.round(clamp(fy > .6 ? fy - .28 : fy + .26, .3, .76) * 100)}%`;
   f.className = 'fishing'; f.innerHTML = `<div class="bob">🎣</div><b>찌를 던졌어요… 찌가 쑥 가라앉으면 Ⓐ!</b>`;
   sfx('splash');
@@ -1623,7 +1672,8 @@ function fishTap(auto) {
   const f = $('fishing');
   if (!fi.bite) { if (f && !AH.on) f.querySelector('b').textContent = '아직이에요. 찌를 지켜보세요!'; return; }
   clearTimeout(fi.timer); w.fishing = null; if (f) f.remove();
-  spend('fish', Math.max(1, howMany(w, 'fish')), auto ? ' · 찌가 가라앉아 저절로 낚았어요' : '');
+  const n = Math.max(1, howMany(w, 'fish'));
+  spend('fish', n, auto ? ' · 찌가 가라앉아 저절로 낚았어요' : '', luckRoll(n));
 }
 /* Ⓐ 길게 누르기: 누르고 있는 동안 같은 일을 이어서 한다(나무는 다 딸 때까지, 낚시는 찌가 가라앉으면 바로 낚고 다시 던진다).
    ptr: 화면을 눌러 시작했으면 그 손가락(포인터) 번호. 그 손가락을 뗄 때만 멈춘다(키보드는 null)
@@ -1710,7 +1760,7 @@ function drawRate(tries) {
 function ledgerMarket(tries, cur) {
   if (!tries.length) return '<h3>📒 장부</h3><p class="note">아직 시장에 간 날이 없어요.</p>';
   const body = tries.map((t, i) => { const [a, b] = t.rate;
-    return `<tr class="${i === tries.length - 1 && cur === 'last' ? 'new' : ''} ${cur && cur.fish != null && t.made.fish === cur.fish ? 'cur' : ''}"><td>${i + 1}일</td><td>${stockTxt(t.made)}</td><td><span class="nw">${IC.fish}${a}=${IC.fruit}${b}</span></td><td>${t.n ? `<span class="nw">${IC.fruit}${b * t.n}→${IC.fish}${a * t.n}</span>` : '—'}</td><td>${shortIcon(t.after, NEED)}</td></tr>`; }).join('');
+    return `<tr class="${i === tries.length - 1 && cur === 'last' ? 'new' : ''} ${cur && cur.fish != null && t.made.fish === cur.fish ? 'cur' : ''}"><td>${i + 1}일</td><td>${stockTxt(t.made)}${luckTxt(t.made)}</td><td><span class="nw">${IC.fish}${a}=${IC.fruit}${b}</span></td><td>${t.n ? `<span class="nw">${IC.fruit}${b * t.n}→${IC.fish}${a * t.n}</span>` : '—'}</td><td>${t.lucky ? `<span class="nw">🍀 덤 빼면</span> ${shortIcon(t.base, NEED)}` : shortIcon(t.after, NEED)}</td></tr>`; }).join('');
   return `<h3>📒 장부 (시장에 간 날 ${tries.length}일)</h3><div class="tw"><table class="ledger"><thead><tr><th>날</th><th>만든 양</th><th>그날 값</th><th>바꾼 것</th><th>결과</th></tr></thead><tbody>${body}</tbody></table></div>`;
 }
 /* cfg: made, rate, hint, ledger(cur), onResult({n, after, ok}) → 말풍선 HTML */
@@ -1727,7 +1777,7 @@ function marketBoard(cfg) {
       const cmp = `<div class="cmp">직접 잡으면 물고기 1마리에 열매 ${OC}개 포기 · 🏪 오늘 시장에서는 열매 <span class="nw">${p.html()}개</span></div>`;
       sh.innerHTML = `<h2>🏪 교역섬 시장</h2><p class="sub">곰 마을이 물고기를 가져와 열매와 바꾸려고 해요. 오늘 값은 이래요.</p>
         <div class="rate"><small>오늘의 교환 비율</small><b>${rateTxt(cfg.rate)}</b><span class="note">물고기 ${a}마리를 받을 때마다 열매 ${b}개를 내요. 곰 마을 물고기는 ${BEAR_FISH}마리까지 있어요.</span></div>${cmp}
-        <div class="trade"><div class="trade-row">🎒 가져온 것 ${stockTxt(made)}</div>
+        <div class="trade"><div class="trade-row">🎒 가져온 것 ${stockTxt(made)}${luckTxt(made)}</div>
           ${st.res ? '' : `<div class="trade-row">🤝 바꿀 횟수 <span class="step"><button type="button" id="n-" aria-label="바꿀 횟수 줄이기" ${st.n <= 0 ? 'disabled' : ''}>−</button><output>${st.n}</output><button type="button" id="n+" aria-label="바꿀 횟수 늘리기" ${st.n >= max ? 'disabled' : ''}>+</button></span>번
             <span class="note nw">${IC.fruit}${b * st.n} 내고 ${IC.fish}${a * st.n} 받기</span></div>
             ${!max ? `<div class="trade-row res-no">열매가 ${made.fruit}개뿐이라 한 번도 바꿀 수 없어요.</div>` : ''}`}
@@ -1743,8 +1793,10 @@ function marketBoard(cfg) {
       step('#n-', -1); step('#n\\+', 1);
       const go = sh.querySelector('#mk-go');
       if (go) go.onclick = () => {
-        const af2 = after(st.n), ok = af2.fish >= NEED.fish && af2.fruit >= NEED.fruit;
-        st.res = { n: st.n, after: af2, ok };
+        // 덤을 뺀 양으로도 같은 횟수로 바꿔 채워져야 통과다(행운만으로 채운 날은 다시)
+        const af2 = after(st.n), base0 = noLuck(made), base = { fish: base0.fish + a * st.n, fruit: base0.fruit - b * st.n };
+        const full = x => x.fish >= NEED.fish && x.fruit >= NEED.fruit, lucky = full(af2) && !full(base), ok = full(af2) && !lucky;
+        st.res = { n: st.n, after: af2, ok, lucky, base };
         st.said = cfg.onResult(st.res);
         sfx(ok ? 'win' : 'no'); render(); scrollSay(sh);
       };
@@ -1797,7 +1849,7 @@ function makeWeek() {
 function weekLedger(log) {
   if (!log.length) return '<p class="note">아직 보낸 날이 없어요.</p>';
   return `<div class="tw"><table class="ledger"><thead><tr><th>날</th><th>날씨 · 값</th><th>만든 양</th><th>바꾼 것</th><th>먹고 난 뒤</th></tr></thead><tbody>${log.map((d, i) => { const [a, b] = d.rate;
-    return `<tr class="${i === log.length - 1 ? 'new' : ''}"><td>${d.day}</td><td>${d.storm ? '⛈️ 휴장' : `<span class="nw">☀️ ${a}:${b}</span>`}</td><td>${stockTxt(d.made)}</td><td>${d.n ? `<span class="nw">${IC.fruit}${b * d.n}→${IC.fish}${a * d.n}</span>` : '—'}</td><td>${d.hungry ? `😢 ${shortIcon(d.af, NEED)}` : `😊 ${stockTxt(d.end)}`}</td></tr>`; }).join('')}</tbody></table></div>`;
+    return `<tr class="${i === log.length - 1 ? 'new' : ''}"><td>${d.day}</td><td>${d.storm ? '⛈️ 휴장' : `<span class="nw">☀️ ${a}:${b}</span>`}</td><td>${stockTxt(d.made)}${luckTxt(d.made)}</td><td>${d.n ? `<span class="nw">${IC.fruit}${b * d.n}→${IC.fish}${a * d.n}</span>` : '—'}</td><td>${d.hungry ? `😢 ${shortIcon(d.af, NEED)}` : `😊 ${stockTxt(d.end)}`}</td></tr>`; }).join('')}</tbody></table></div>`;
 }
 /* 이레 치 날씨와 값 예보. d일째를 '오늘'로 표시 */
 function weekForecast(cfg, d) {
@@ -1852,7 +1904,7 @@ function weekEvening(cfg, st, d, made) {
         ${weekForecast(cfg, d)}
         ${v.done ? '' : `<div class="today ${stormy ? 'storm' : ''}">${stormy ? '⛈️ 오늘은 폭풍' : `☀️ 오늘 값 ${rateTxt(rate)}`}</div>
         <div class="out"><b>📦 창고</b><span>${stockTxt(v.store0)}</span></div>
-        <div class="out"><b>🎒 오늘 만든 것</b><span>${stockTxt(made)}</span></div>
+        <div class="out"><b>🎒 오늘 만든 것</b><span>${stockTxt(made)}${luckTxt(made)}</span></div>
         ${tradeBox}
         <div class="out"><b>먹기 전</b><span>${stockTxt(o.af)}</span></div>
         <div class="need"><span class="note">오늘 먹을 양</span>${needChip('fish', o.af.fish, NEED.fish)}${needChip('fruit', o.af.fruit, NEED.fruit)}</div>
@@ -2116,8 +2168,9 @@ async function ch1() {
   await say('rchief', `우리 마을에서는 물고기 1마리를 잡는 데 ${HR.r.fish}시간, 열매 1개를 따는 데 ${HR.r.fruit}시간이 걸린단다. 해가 질 때까지 ${DAY_H}시간이야.`);
   await say('tori', '과수원은 마을 서쪽이고, 낚시터는 남쪽 부두야. 열매나무 앞에서 Ⓐ를 누르면 열매를 따고, 부두에서 바다를 보고 Ⓐ를 누르면 낚시를 해! Ⓐ를 길게 누르고 있으면 이어서 해.');
   const bag = await workDay({ cost: HR.r, hours: DAY_H, need: NEED });
-  await say('rchief', `해가 졌구나. 물고기 ${bag.fish}마리, 열매 ${bag.fruit}개라… ${shortTxt(bag, NEED) ? `${shortTxt(bag, NEED)}가 모자라.` : ''}`);
-  await say('rchief', '주문서를 다 채우려면 물고기 3마리에 18시간, 열매 5개에 5시간, 모두 23시간이 필요하단다. 하루는 12시간뿐이니 어떻게 일해도 모자라. 우리 마을 혼자서는 안 되겠구나.');
+  const lucky = !shortTxt(bag, NEED);   // 덤 없이는 하루에 물고기를 2마리까지만 잡으므로, 주문을 다 채웠다면 행운 덕분이다
+  await say('rchief', `해가 졌구나. 물고기 ${bag.fish}마리, 열매 ${bag.fruit}개라… ${lucky ? `🍀 행운의 덤 덕분에 주문서를 다 채웠구나! 하지만 덤이 없었다면 ${shortTxt(noLuck(bag), NEED)}가 모자랐단다.` : `${shortTxt(bag, NEED)}가 모자라.`}`);
+  await say('rchief', `주문서를 다 채우려면 물고기 3마리에 18시간, 열매 5개에 5시간, 모두 23시간이 필요하단다. 하루는 12시간뿐이니 ${lucky ? '행운이 없으면 늘 모자라. 잔치는 해마다 열리는데 행운만 바랄 수는 없지.' : '어떻게 일해도 모자라.'} 우리 마을 혼자서는 안 되겠구나.`);
   await say('rchief', '곰 마을에 가기 전에 하나만 보고 가렴. 물고기를 잡을지 열매를 딸지 고르는 순간, 다른 하나는 포기하게 된단다. 마을 뒤 거울 연못에 비춰 보면 알 수 있지.');
   Dlg.close();
   await mirrorBoard();
@@ -2179,14 +2232,15 @@ async function ch3() {
     if (!tries.length) await say('tori', '과수원은 서쪽, 낚시터는 남쪽 부두! 해가 지면 일한 것을 들고 교역섬 시장으로 가자.');
     if (tries.length === 1) await say('tori', '어제 해 봐서 손에 익었지? 오늘부터 열매는 Ⓐ 한 번에 2개씩 딸 수 있어. 2개에 2시간이야.');
     const made = await workDay({ cost: HR.r, hours: DAY_H, need: NEED, day: tries.length + 1 });
-    await say('gomi', `물고기 ${made.fish}마리, 열매 ${made.fruit}개! 시장으로 가자.`);
+    await say('gomi', `물고기 ${made.fish}마리, 열매 ${made.fruit}개!${luckTxt(made) ? ' 행운의 덤도 있었네!' : ''} 시장으로 가자.`);
     Dlg.close();
     await fadeTo(() => warp(28, 19, 'up'));
     const rate = drawRate(tries);
     const r = await marketBoard({
       made, rate, hint: H, ledger: cur => ledgerMarket(tries, cur),
       onResult: res => {
-        tries.push({ made, rate, n: res.n, after: res.after, ok: res.ok });
+        tries.push({ made, rate, n: res.n, after: res.after, ok: res.ok, lucky: res.lucky, base: res.base });
+        if (res.lucky) { H.fails++; return sayHTML('sage', `🍀 행운의 덤 덕분에 잔치에 필요한 양이 모였구나. 그런데 덤을 빼고 똑같이 바꾸면 ${res.base.fruit < 0 ? '바꿀 열매부터 모자랐단다' : `${shortTxt(res.base, NEED)}가 모자랐단다`}. 잔치는 해마다 열리는데 행운은 매번 오지 않지. 행운 없이도 채우는 방법을 찾아 다음 날 다시 해 보자.`) + autoHint(H); }
         if (res.ok) { const left = res.after.fruit - NEED.fruit; return sayHTML('sage', `🎉 잔치에 필요한 양을 모두 채웠구나!${left ? ` 열매가 ${left}개 남았네.` : ' 딱 맞게 채웠어.'}`); }
         H.fails++;
         return sayHTML('sage', `${shortTxt(res.after, NEED)}가 모자라는구나. 다음 날 다시 해 보자. 시장 값은 날마다 바뀐단다.`) + autoHint(H);
@@ -2312,8 +2366,12 @@ async function foxQuest() {
     return m;
   };
   for (;;) {
-    const m = await work(), buy = Math.max(0, NX.fruit - m.fruit), idle = HX - m.fish * HR.x.fish - m.fruit * HR.x.fruit;
+    const m = await work(), b0 = noLuck(m), buy = Math.max(0, NX.fruit - m.fruit), idle = HX - b0.fish * HR.x.fish - b0.fruit * HR.x.fruit;
+    // 덤을 뺀 양으로도 주문을 채울 수 있었는지(토끼 마을에서 열매 1개 = 물고기 2마리로 사서)
+    const bbuy = Math.max(0, NX.fruit - b0.fruit), baseOk = b0.fish >= 2 * bbuy && b0.fish - 2 * bbuy >= NX.fish;
+    const luckLine = `그런데 행운의 덤 덕분이야. 덤이 없었다면 주문을 못 채웠어. 잔치는 해마다 열리는데 행운은 매번 오지 않잖아. 행운 없이도 되는 방법을 찾아보자.`;
     if (!m.fish) { await say('fox', `물고기가 하나도 없네. 물고기는 1시간이면 잡는데, ${idle ? `남은 ${idle}시간을 그냥 보냈어.` : '열매 따느라 하루를 다 썼어.'}`); Dlg.close(); continue; }
+    if (!buy && m.fish >= NX.fish) { await say('fox', `행운의 덤으로 열매까지 다 모였네! ${luckLine}`); Dlg.close(); continue; }
     if (m.fish < 2 * buy) { await say('fox', `열매 ${buy}개를 사려면 물고기 ${2 * buy}마리가 필요한데 ${m.fish}마리뿐이네.${idle ? ` 남은 ${idle}시간에 물고기를 더 잡았으면 좋았을 텐데.` : ''} 다시 해 보자.`); Dlg.close(); continue; }
     let again = false;
     for (;;) {
@@ -2327,6 +2385,7 @@ async function foxQuest() {
       }
       const lack = NX.fish - (m.fish - 2 * buy);
       if (lack > 0) { await say('fox', `토끼 마을이 열매 ${buy}개를 바꿔 줬어. 그런데 물고기가 ${lack}마리 모자라네. ${idle ? `남은 ${idle}시간에 물고기를 더 잡았으면 됐을 텐데…` : '열매 1개를 따는 3시간이면 물고기를 3마리나 잡을 수 있었는데…'}`); again = true; }
+      else if (!baseOk) { await say('fox', `토끼 마을이 열매 ${buy}개를 바꿔 줬어. 주문도 다 채웠지! ${luckLine}`); again = true; }
       break;
     }
     Dlg.close();
@@ -2552,13 +2611,37 @@ document.addEventListener('keydown', e => {
   else if (e.code === 'Escape') openMenu();
 });
 document.addEventListener('keyup', e => { const d = KEYMAP[e.code]; if (d) release(d); if (A_KEYS.includes(e.code)) { aUp(); AH.block = false; } });
-window.addEventListener('blur', () => { held.clear(); heldOrder = []; aUp(); AH.block = false; });
-document.querySelectorAll('.dpad button').forEach(b => {
-  const d = b.dataset.d;
-  b.addEventListener('pointerdown', e => { e.preventDefault(); b.setPointerCapture && b.setPointerCapture(e.pointerId); b.classList.add('on'); ac(); if (Dlg.active) { Dlg.advance(); return; } press(d); });
-  const up = () => { b.classList.remove('on'); release(d); };
-  b.addEventListener('pointerup', up); b.addEventListener('pointercancel', up); b.addEventListener('lostpointercapture', up);
+window.addEventListener('blur', () => { held.clear(); heldOrder = []; aUp(); AH.block = false; padPtr.clear(); padShow(); });
+/* 화면 방향키: 네 버튼을 하나의 판으로 다룬다. 손가락이 판 가운데에서 어느 쪽에 있는지로 방향을 정하므로,
+   누른 채 다른 방향 버튼으로 손가락을 밀면 바로 방향이 바뀐다(판 밖으로 나가도 이어진다). 손가락마다 따로 센다 */
+const DPAD = document.querySelector('.dpad'), padPtr = new Map();
+function padDir(e) {
+  const r = DPAD.getBoundingClientRect(), dx = e.clientX - (r.left + r.width / 2), dy = e.clientY - (r.top + r.height / 2);
+  if (Math.hypot(dx, dy) < Math.min(r.width, r.height) * .12) return null;   // 한가운데는 방향 없음
+  return Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up');
+}
+function padShow() { const on = new Set(padPtr.values()); DPAD.querySelectorAll('button').forEach(b => b.classList.toggle('on', on.has(b.dataset.d))); }
+function padSet(id, d) {
+  const old = padPtr.get(id); if (old === d) return;
+  padPtr.set(id, d);
+  if (old && ![...padPtr.values()].includes(old)) release(old);
+  if (d) press(d);
+  padShow();
+}
+function padEnd(e) {
+  if (!padPtr.has(e.pointerId)) return;
+  const old = padPtr.get(e.pointerId); padPtr.delete(e.pointerId);
+  if (old && ![...padPtr.values()].includes(old)) release(old);
+  padShow();
+}
+DPAD.addEventListener('pointerdown', e => {
+  e.preventDefault(); ac();
+  if (Dlg.active) { Dlg.advance(); return; }
+  if (DPAD.setPointerCapture) DPAD.setPointerCapture(e.pointerId);
+  padSet(e.pointerId, padDir(e));
 });
+DPAD.addEventListener('pointermove', e => { if (!padPtr.has(e.pointerId)) return; const d = padDir(e); if (d) padSet(e.pointerId, d); });
+['pointerup', 'pointercancel', 'lostpointercapture'].forEach(ev => DPAD.addEventListener(ev, padEnd));
 $('abtn').addEventListener('pointerdown', e => { e.preventDefault(); ac(); if (Dlg.active) { if (Dlg.mode === 'say' || Dlg.timer) Dlg.advance(); return; } interact(); aDown(e.pointerId); });
 cv.addEventListener('pointerdown', e => {
   ac();
@@ -2579,7 +2662,7 @@ $('btn-menu').onclick = () => { sfx('sel'); ac(); openMenu(); };
    설정·장 선택
    ========================================================= */
 const VKEY = 'yongdol-ta-view';
-let VIEW = { theme: null, big: false, pad: 'auto' };
+let VIEW = { theme: null, big: false, pad: 'auto', vib: true };
 try { const v = localStorage.getItem(VKEY); if (v) VIEW = Object.assign(VIEW, JSON.parse(v)); } catch (e) { /* 무시 */ }
 function applyView() {
   const r = document.documentElement;
@@ -2599,6 +2682,7 @@ function openMenu() {
       <button type="button" class="btn ghost" id="m-snd">${AU.on ? '🔊 소리 끄기' : '🔇 소리 켜기'}</button>
       <button type="button" class="btn ghost" id="m-big">${VIEW.big ? '🔠 글자 보통으로' : '🔠 글자 크게 (교실 화면용)'}</button>
       <button type="button" class="btn ghost" id="m-theme">${dark ? '☀️ 밝은 화면' : '🌙 어두운 화면'}</button>
+      ${'vibrate' in navigator ? `<button type="button" class="btn ghost" id="m-vib">${VIEW.vib !== false ? '📳 진동 끄기' : '📴 진동 켜기'}</button>` : ''}
       <button type="button" class="btn ghost" id="m-pad">🎮 화면 버튼: ${{ auto: '자동', on: '항상 보이기', off: '숨기기' }[VIEW.pad]}</button>
       ${S.f.boat && P && P.mode === 'land' && canControlIgnoringModal() ? '<button type="button" class="btn ghost" id="m-sail">⛵ 빠른 항해</button>' : ''}
       ${S.f.festival ? '<button type="button" class="btn ghost" id="m-cert">📜 학습 기록 보기</button>' : ''}
@@ -2610,6 +2694,7 @@ function openMenu() {
   sh.querySelector('#m-snd').onclick = () => { AU.on = !AU.on; try { localStorage.setItem('yongdol-ta-sound', AU.on ? '1' : '0'); } catch (e) { /* 무시 */ } if (AU.on) { ac(); updateMusic(); sfx('sel'); } else stopMusic(); closeModal(); openMenu(); };
   sh.querySelector('#m-big').onclick = () => { VIEW.big = !VIEW.big; applyView(); closeModal(); openMenu(); };
   sh.querySelector('#m-theme').onclick = () => { VIEW.theme = dark ? 'light' : 'dark'; applyView(); closeModal(); openMenu(); };
+  const vb = sh.querySelector('#m-vib'); if (vb) vb.onclick = () => { VIEW.vib = VIEW.vib === false; applyView(); if (VIEW.vib) buzz(60); closeModal(); openMenu(); };
   sh.querySelector('#m-pad').onclick = () => { VIEW.pad = { auto: 'on', on: 'off', off: 'auto' }[VIEW.pad]; applyView(); closeModal(); openMenu(); };
   const sail = sh.querySelector('#m-sail'); if (sail) sail.onclick = () => { closeModal(); fastTravel(); };
   sh.querySelector('#m-help').onclick = () => { closeModal(); helpModal(); };
@@ -2835,7 +2920,7 @@ window.__yd = {
   tp(x, y, dir = 'down', mode = 'land') { P.x = x; P.y = y; P.px = x * TILE; P.py = y * TILE; P.dir = dir; P.mode = mode; P.moving = false; resetTrail(); P.island = islandAt(x, y); },
   exam: () => G.exam, cam: () => ({ ...G.cam, VW, VH }),
   /* 무작위 값 고정: setRate(RATES 번호 또는 null), setWeek({ storms, rates } 또는 null) */
-  setRate(i) { G.forceRate = i; }, setWeek(w) { G.forceWeek = w; }, work: () => G.work && { at: G.work.at, day: G.work.day, per: G.work.per, used: G.work.used, left: workLeft(), bag: { ...G.work.bag }, fishing: !!G.work.fishing, bite: !!(G.work.fishing && G.work.fishing.bite), msg: G.work.msg }, hold: () => ({ ...AH }), weekSolvable: (r, s) => weekSolvable(r, s),
+  setRate(i) { G.forceRate = i; }, luck(p, n) { G.luck = p == null ? null : { p, n }; }, setWeek(w) { G.forceWeek = w; }, work: () => G.work && { at: G.work.at, day: G.work.day, per: G.work.per, used: G.work.used, left: workLeft(), bag: { ...G.work.bag }, luck: { ...G.work.luck }, fishing: !!G.work.fishing, bite: !!(G.work.fishing && G.work.fishing.bite), msg: G.work.msg }, hold: () => ({ ...AH }), weekSolvable: (r, s) => weekSolvable(r, s),
   check() {
     const bad = [], ok = (x, y) => inb(x, y) && !SOLID_T.has(tAt(x, y)) && !isWaterT(tAt(x, y)) && !(objAt(x, y) || {}).solid && !npcAt(x, y);
     const reach = new Set(), q = [];
