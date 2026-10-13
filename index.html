@@ -1940,27 +1940,43 @@ function weekEvening(cfg, st, d, made) {
       L.push(o.hungry ? `😢 ${shortTxt(o.af, NEED)}가 모자라 배를 곯았어요.` : o.end.fish + o.end.fruit ? `😊 배불리 먹었어요. 창고에 남은 것 ${stockTxt(o.end)}` : '🙂 딱 맞게 먹었어요. 창고에 남은 것은 없어요.');
       return L.join('<br>');
     };
+    const fruitMax = stormy ? 0 : Math.floor(have.fruit / rate[1]), fishMax = stormy ? 0 : Math.floor(BEAR_FISH / rate[0]);
+    const OC = HR.r.fish / HR.r.fruit;   // 토끼 마을 물고기 1마리의 기회비용 (열매)
+    const head = (no, t) => `<h3><span class="mk-n">${no}</span>${t}</h3>`;
+    /* ① 오늘 값(폭풍이면 휴장) ② 앞으로의 날씨와 값(내일 폭풍이면 대비 확인) ③ 바꿀 횟수와 계산표(창고 → 먹기 → 내일 창고) */
     const render = () => {
-      const o = calc();
-      const tradeBox = stormy ? '<div class="trade storm"><div class="trade-row">⛈️ 폭풍이라 시장이 닫혔어요. 창고와 오늘 만든 것으로만 버텨야 해요.</div></div>'
-        : `<div class="trade"><div class="trade-row">🤝 바꿀 횟수 <span class="step"><button type="button" id="n-" aria-label="바꿀 횟수 줄이기" ${o.n <= 0 ? 'disabled' : ''}>−</button><output>${o.n}</output><button type="button" id="n+" aria-label="바꿀 횟수 늘리기" ${o.n >= max ? 'disabled' : ''}>+</button></span>번
-          <span class="note nw">${IC.fruit}${rate[1] * o.n} 내고 ${IC.fish}${rate[0] * o.n} 받기</span></div></div>`;
-      const prep = d >= days || !cfg.storms.includes(d + 1) ? '' : `<div class="prep">⛈️ <b>내일은 폭풍!</b> 시장이 닫혀요. 이대로면 내일 버틸 수 있을까? ${canWeather(o.end) ? '<span class="res-ok">버틸 수 있어요</span>' : '<span class="res-no">모자라요</span>'}</div>`;
-      sh.innerHTML = `<h2>🌙 ${d}일째 저녁 · ${stormy ? '⛈️ 폭풍' : '교역섬 시장'} <span class="nw">${d}/${days}</span></h2>
-        <div class="goalbar">날마다 먹는 양 <span class="nw">${IC.fish}${NEED.fish} ${IC.fruit}${NEED.fruit}</span> · <span class="nw">굶은 날 ${hungerOf(st.log)}번</span><br><span class="note">먹고 남은 것은 창고에 쌓여 다음 날 쓸 수 있어요.</span></div>
-        ${weekForecast(cfg, d)}
-        ${v.done ? '' : `<div class="today ${stormy ? 'storm' : ''}">${stormy ? '⛈️ 오늘은 폭풍' : `☀️ 오늘 값 ${rateTxt(rate)}`}</div>
-        <div class="out"><b>📦 창고</b><span>${stockTxt(v.store0)}</span></div>
-        <div class="out"><b>🎒 오늘 만든 것</b><span>${stockTxt(made)}</span></div>
-        ${tradeBox}
-        <div class="out"><b>먹기 전</b><span>${stockTxt(o.af)}</span></div>
-        <div class="need"><span class="note">오늘 먹을 양</span>${needChip('fish', o.af.fish, NEED.fish)}${needChip('fruit', o.af.fruit, NEED.fruit)}</div>
-        <div class="out"><b>내일 창고</b><span>${stockTxt(o.end)}</span></div>${prep}`}
-        ${v.said}
-        <div class="row">${v.done ? `<button type="button" class="btn" id="db-next">${d >= days ? '다음 ▶' : '🌙 자러 가기 · 다음 날 ▶'}</button>`
-          : `<button type="button" class="btn" id="db-go">${stormy ? '⛈️' : '🍽️'} 이대로 먹고 하루 마치기</button>`}
+      const o = calc(), [a, b] = rate, next = d < days ? { storm: cfg.storms.includes(d + 1), rate: cfg.rates[d] } : null;
+      const cell = (k, x, sign = '') => `<td>${x ? `${sign}${x}` : '0'}</td>`;
+      const verdict = k => { const dd = o.af[k] - NEED[k]; return dd < 0 ? `<td class="mk-bad">✖ ${-dd}${GD[k].u} 모자라요</td>` : `<td class="mk-good">✔ ${dd ? `${dd}${GD[k].u} 남아요` : '딱 맞아요'}</td>`; };
+      const step1 = `<div class="mk-step">${head(1, stormy ? '오늘은 폭풍' : '오늘 시장 값')}
+        ${stormy ? '<div class="trade storm"><div class="trade-row">⛈️ 폭풍이라 시장이 닫혔어요. 창고와 오늘 만든 것으로만 버텨야 해요.</div></div>'
+          : `<div class="rate"><b>${rateTxt(rate)}</b><span class="note">열매 ${b}개를 내면 물고기 ${a}마리를 받아요. 곰 마을 물고기는 오늘 ${BEAR_FISH}마리까지 있어요.</span></div>
+          <p class="note">물고기 1마리로 치면 직접 잡기는 열매 ${OC}개 포기, 오늘 시장은 <span class="nw">열매 ${new F(b, a).html()}개</span>예요.</p>`}</div>`;
+      const step2 = `<div class="mk-step">${head(2, '앞으로의 날씨와 값')}${weekForecast(cfg, d)}
+        ${!next ? '<p class="note">오늘이 마지막 날이에요.</p>'
+          : next.storm ? `<div class="prep">⛈️ <b>내일은 폭풍!</b> 시장이 닫혀요. 이대로면 내일 버틸 수 있을까? ${canWeather(o.end) ? '<span class="res-ok">버틸 수 있어요</span>' : '<span class="res-no">모자라요</span>'}</div>`
+          : `<p class="note">내일 시장 값은 <span class="nw">${rateTxt(next.rate)}</span>예요. 오늘 값과 견줘 보세요.</p>`}</div>`;
+      const stop = v.done || stormy ? '' : !max ? `<p class="note mk-stop">열매가 ${have.fruit}개뿐이라 오늘은 바꿀 수 없어요.</p>`
+        : v.n >= max ? `<p class="note mk-stop">${fruitMax <= fishMax ? `남은 열매 ${o.af.fruit}개로는 더 바꿀 수 없어요(한 번에 ${b}개).` : `곰 마을 물고기는 오늘 ${BEAR_FISH}마리까지라 더 바꿀 수 없어요.`}</p>` : '';
+      const step3 = `<div class="mk-step">${head(3, v.done ? '오늘 먹은 결과' : stormy ? '오늘 먹을 것' : '몇 번 바꿀까?')}
+        ${v.done || stormy ? '' : `<div class="trade-row mk-plan">🤝 <span class="step"><button type="button" id="n-" aria-label="바꿀 횟수 줄이기" ${o.n <= 0 ? 'disabled' : ''}>−</button><output>${o.n}</output><button type="button" id="n+" aria-label="바꿀 횟수 늘리기" ${o.n >= max ? 'disabled' : ''}>+</button></span>번 바꾸기
+          <span class="note nw">한 번에 ${IC.fruit}${b} → ${IC.fish}${a}</span></div>`}${stop}
+        <div class="tw"><table class="mk-tbl"><thead><tr><th></th><th>${IC.fish} 물고기</th><th>${IC.fruit} 열매</th></tr></thead><tbody>
+          <tr><th>📦 창고</th>${cell('fish', v.store0.fish)}${cell('fruit', v.store0.fruit)}</tr>
+          <tr><th>🎒 오늘 만든 것</th>${cell('fish', made.fish, '+')}${cell('fruit', made.fruit, '+')}</tr>
+          ${stormy ? '' : `<tr><th>🤝 바꾸기 <span class="nw">${o.n}번</span></th>${cell('fish', a * o.n, '+')}${cell('fruit', b * o.n, '−')}</tr>`}
+          <tr class="mk-sum" id="wk-before"><th>먹기 전</th><td>${o.af.fish}</td><td>${o.af.fruit}</td></tr>
+          <tr><th>🍽️ 오늘 먹을 양</th><td>−${NEED.fish}</td><td>−${NEED.fruit}</td></tr>
+          <tr class="mk-res"><th>먹고 나면</th>${verdict('fish')}${verdict('fruit')}</tr>
+          <tr class="mk-sum" id="wk-end"><th>📦 내일 창고</th><td>${o.end.fish}</td><td>${o.end.fruit}</td></tr>
+        </tbody></table></div>${o.hungry && !v.done ? '<p class="note mk-stop">이대로면 오늘 배를 곯아요.</p>' : ''}</div>`;
+      const btns = `<div class="mk-btns">${v.done ? `<button type="button" class="btn wide" id="db-next">${d >= days ? '다음 ▶' : '🌙 자러 가기 · 다음 날 ▶'}</button>`
+          : `<button type="button" class="btn wide" id="db-go">${stormy ? '⛈️' : '🍽️'} 이대로 먹고 하루 마치기</button>`}
         ${cfg.hints && !v.done ? '<button type="button" class="btn ghost small" id="db-hint">💬 동료에게 묻기</button>' : ''}
-        <button type="button" class="btn ghost small" id="db-note">📒 수첩</button></div>
+        <button type="button" class="btn ghost small${cfg.hints && !v.done ? '' : ' wide'}" id="db-note">📒 수첩</button></div>`;
+      sh.innerHTML = `<h2>🌙 ${d}일째 저녁 · ${stormy ? '⛈️ 폭풍' : '교역섬 시장'} <span class="nw note">${d}/${days}</span></h2>
+        <div class="goalbar">날마다 먹는 양 <span class="nw">${IC.fish}${NEED.fish} ${IC.fruit}${NEED.fruit}</span> · <span class="nw">굶은 날 ${hungerOf(st.log)}번</span><br><span class="note">먹고 남은 것은 창고에 쌓여 다음 날 쓸 수 있어요.</span></div>
+        <div class="mk-grid"><div>${step1}${step2}</div><div>${step3}${v.said}${btns}</div></div>
         <h3>📒 날마다 장부</h3>${weekLedger(st.log)}`;
       const step = (id, dd) => { const el = sh.querySelector(id); if (el) el.onclick = () => { sfx('sel'); v.n = clamp(v.n + dd, 0, max); render(); const nb = sh.querySelector(id); if (nb && !nb.disabled) nb.focus(); }; };
       step('#n-', -1); step('#n\\+', 1);
