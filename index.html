@@ -1540,7 +1540,9 @@ function autoHint(H) {
    ========================================================= */
 const TREE_FRUIT = 4;   // 나무 한 그루에서 하루에 딸 수 있는 열매
 const HOLD_FIRST = 420, HOLD_EVERY = 320;   // Ⓐ 길게 누르기: 처음 기다리는 시간, 이어서 하는 간격(ms)
-const LUCK_P = .08;   // 채취 한 번에 행운이 터질 확률. 행운이면 한 번에 2~4개를 얻고, 평소보다 더 얻은 덤은 시간이 들지 않는다
+const LUCK_P = .03, LUCK_PER_DAY = 1;   // 채취 한 번에 행운이 터질 확률, 하루에 터질 수 있는 횟수. 행운이면 한 번에 2~4개를 얻고, 평소보다 더 얻은 덤은 시간이 들지 않는다
+/* 3%·하루 1번이면 열매만 따는 날(채취 12번) 약 31%, 2개씩 따는 날(6번) 약 17%, 본편 전체(약 26번) 평균 0.8번 정도 터진다.
+   8%·제한 없음일 때는 하루 63%, 본편 평균 2번 넘게 터져 교사가 너무 잦다고 했다(2026-10-13) */
 function redrawTile(x, y) { const g = terr.getContext('2d'); g.imageSmoothingEnabled = false; drawTile(g, x, y); }
 function warp(x, y, dir = 'down') {
   P.mode = 'land'; P.x = x; P.y = y; P.px = x * TILE; P.py = y * TILE; P.moving = false; P.path = null; P.after = null; P.dir = dir;
@@ -1554,7 +1556,7 @@ function workDay(cfg) {
   return new Promise(resolve => {
     const saved = G.busy; G.busy = 0; Dlg.close(); hideCard();
     const day = cfg.day || 1, short = cfg.cost.fish <= cfg.cost.fruit ? 'fish' : 'fruit';
-    G.work = { at: 'rabbit', ...cfg, day, short, per: day >= 2 ? 2 : 1, hours: cfg.hours || DAY_H, used: 0, bag: { fish: 0, fruit: 0 }, luck: { fish: 0, fruit: 0 }, picks: new Map(), fishing: null,
+    G.work = { at: 'rabbit', ...cfg, day, short, per: day >= 2 ? 2 : 1, hours: cfg.hours || DAY_H, used: 0, bag: { fish: 0, fruit: 0 }, luck: { fish: 0, fruit: 0 }, lucks: 0, picks: new Map(), fishing: null,
       msg: TOUCH ? '💡 나무나 바다를 누르면 그 앞으로 가서 일해요. 길게 누르면 이어서 해요.' : '💡 Ⓐ를 길게 누르면 이어서 해요.',
       finish: () => {
         const w = G.work; if (!w) return;
@@ -1585,10 +1587,12 @@ function workBar() {
 }
 function workSay(msg, snd) { if (!G.work) return; G.work.msg = msg; if (snd) sfx(snd); workBar(); }
 function endWork() { if (!G.work) return; toast('🌙 해가 졌어요.', 'gold', 2200); G.work.finish(); }
-/* 행운 굴리기: 평소 n개를 얻을 때, LUCK_P 확률로 평소보다 많은 2~4개. G.luck = { p, n }이면 확률·개수를 고정(점검용) */
+/* 행운 굴리기: 평소 n개를 얻을 때, LUCK_P 확률로 평소보다 많은 2~4개. 하루에 LUCK_PER_DAY번까지.
+   G.luck = { p, n }이면 확률·개수를 고정(점검용. 하루 횟수 제한은 그대로 지킨다) */
 function luckRoll(n) {
-  const L = G.luck, p = L ? L.p : LUCK_P, lo = Math.max(2, n + 1);
-  if (lo > 4 || Math.random() >= p) return n;
+  const L = G.luck, p = L ? L.p : LUCK_P, lo = Math.max(2, n + 1), w = G.work;
+  if (lo > 4 || (w && w.lucks >= LUCK_PER_DAY) || Math.random() >= p) return n;
+  if (w) w.lucks = (w.lucks || 0) + 1;
   return L && L.n ? clamp(L.n, lo, 4) : lo + Math.floor(Math.random() * (5 - lo));
 }
 /* 시간 n개만큼 쓰고 got개를 얻는다(got > n이면 행운) */
