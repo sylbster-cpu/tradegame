@@ -113,6 +113,7 @@ button{font:inherit;color:inherit}
 
 /* ===== 터치 버튼 ===== */
 .pad{flex:none;display:flex;align-items:center;justify-content:space-between;padding:6px 18px 10px;user-select:none;-webkit-user-select:none;touch-action:none}
+.hud,.stage,.pad{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
 .pad[hidden]{display:none}
 .dpad{display:grid;grid-template-columns:repeat(3,52px);grid-template-rows:repeat(3,46px);gap:2px}
 .dpad button{background:var(--paper);border:2px solid var(--frame);border-radius:10px;font-size:1.1rem;color:var(--ink);touch-action:none}
@@ -238,23 +239,16 @@ button.wk:hover{border-color:var(--grn)}
 .rate b{font-family:"Jua",sans-serif;font-weight:400;font-size:1.6rem;line-height:1.2}
 .octable tr.cur td{background:var(--midbg);font-weight:700}
 
-/* 하루 시계 (생산판) */
-.clockwrap{display:flex;justify-content:center;margin:6px 0 2px}
+/* 하루 시계 (2장 시계 비교 카드) */
 .clock{display:block;width:min(300px,100%);height:auto;overflow:visible}
 .clock.small{width:96px}
 .clock .slot{fill:var(--paper);stroke:var(--line);stroke-width:1.5}
-.clock .slotn{font-size:10px;fill:var(--muted);text-anchor:middle;dominant-baseline:central}
 .clock .pc path{stroke-width:2.5;stroke-linejoin:round}
 .clock .pc.fish path{fill:var(--fishbg);stroke:var(--fish)}
 .clock .pc.fruit path{fill:var(--fruitbg);stroke:var(--fruit)}
 .clock .pc .tick{stroke-width:1;stroke-dasharray:3 3;opacity:.6}
 .clock .pc.fish .tick{stroke:var(--fish)}
 .clock .pc.fruit .tick{stroke:var(--fruit)}
-.clock [role=button]{cursor:pointer;outline:none}
-.clock [role=button]:hover path:first-child,.clock [role=button]:focus-visible path:first-child{stroke-width:5}
-.clock .pc.pop{animation:pop .35s ease-out;transform-box:fill-box;transform-origin:center}
-.clock .ctr{font-family:"Jua",sans-serif;font-size:30px;fill:var(--ink);text-anchor:middle}
-.clock .ctr2{font-size:11px;fill:var(--muted);text-anchor:middle}
 .clocks{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;margin:6px 0}
 .clocks figure{margin:0;display:flex;flex-direction:column;align-items:center;gap:4px}
 .clocks figure>div,.clocks figure{min-width:0}
@@ -264,12 +258,6 @@ button.wk:hover{border-color:var(--grn)}
 .ccmp .clocks{gap:14px;margin:0 0 6px}
 .ccmp .pair{display:flex;gap:4px}
 .ccmp .clock.small{width:80px}
-.order{display:flex;flex-wrap:wrap;align-items:center;gap:4px 12px;margin:6px 0;padding:6px 12px;border:2px dashed var(--frame);border-radius:12px;background:var(--paper)}
-.order b{font-family:"Jua",sans-serif;font-weight:400}
-.order i{display:inline-flex;font-style:normal}
-.order i .ic{width:1.5em;height:1.5em}
-.order i.miss{opacity:.3;filter:grayscale(1)}
-.order .plus{font-family:"Jua",sans-serif;font-weight:400;color:var(--ok);margin-left:4px}
 .note.center{text-align:center}
 /* 거울 연못 (1장 기회비용) */
 .mr{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0 4px}
@@ -1484,16 +1472,11 @@ function autoHint(H) {
 }
 
 /* =========================================================
-   생산판: 용돌이가 하루 시계를 조각으로 채운다 (선택 활동 시장 운영)
-   조각 버튼을 누르면 시계의 빈칸에 들어가고, 시계에 든 조각을 누르면
-   긴 조각(토끼 마을 물고기 6시간)은 같은 시간만큼의 짧은 조각(열매 6개)으로 바뀌고 짧은 조각은 빠진다.
+   하루 시계 그림 (2장 시계 비교 카드)
    ========================================================= */
-const madeOf = seq => ({ fish: seq.filter(k => k === 'fish').length, fruit: seq.filter(k => k === 'fruit').length });
-const usedH = (seq, cost) => seq.reduce((n, k) => n + cost[k], 0);
 const GN = { fish: '물고기', fruit: '열매' };
 const pixAt = (k, x, y, w) => IC[k].replace('<svg class="ic"', `<svg x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${w}" height="${w}"`);
-/* 하루 시계 SVG. pieces = [{ k, len, pop }]를 12시 방향부터 시계 방향으로 차례로 그린다.
-   o.click: 조각을 누를 수 있게, o.c1·o.c2: 가운데 글자, o.small: 작은 시계 */
+/* 하루 시계 SVG. pieces = [{ k, len }]를 12시 방향부터 시계 방향으로 차례로 그리고, 남은 칸은 빈칸으로 둔다 */
 function clockSVG(pieces, hours, o = {}) {
   const R = 100, r = 40, ang = t => t / hours * 2 * Math.PI;
   const pt = (a, d) => `${(Math.sin(a) * d).toFixed(2)} ${(-Math.cos(a) * d).toFixed(2)}`;
@@ -1503,60 +1486,15 @@ function clockSVG(pieces, hours, o = {}) {
     return `M${pt(a0, R)}A${R} ${R} 0 ${big} 1 ${pt(a1, R)}L${pt(a1, r)}A${r} ${r} 0 ${big} 0 ${pt(a0, r)}Z`;
   };
   let h = 0, g = '';
-  pieces.forEach((p, i) => {
+  pieces.forEach(p => {
     const s = h, e = Math.min(hours, h + p.len); h = e; if (e <= s) return;
     const mid = ang((s + e) / 2), d = (R + r) / 2, w = e - s > 1 ? 34 : 20;
     const cx = Math.sin(mid) * d, cy = -Math.cos(mid) * d;
     let ticks = ''; for (let t = s + 1; t < e; t++) ticks += `<path class="tick" d="M${pt(ang(t), r)}L${pt(ang(t), R)}"/>`;
-    const btn = o.click ? ` data-i="${i}" role="button" tabindex="0" aria-label="${o.label(p)}"` : '';
-    g += `<g class="pc ${p.k}${p.pop ? ' pop' : ''}"${btn}><path d="${arc(s, e)}" fill-rule="evenodd"/>${ticks}${pixAt(p.k, cx - w / 2, cy - w / 2, w)}</g>`;
+    g += `<g class="pc ${p.k}"><path d="${arc(s, e)}" fill-rule="evenodd"/>${ticks}${pixAt(p.k, cx - w / 2, cy - w / 2, w)}</g>`;
   });
-  for (let t = h; t < hours; t++) {
-    const mid = ang(t + .5), d = (R + r) / 2;
-    g += `<path class="slot" d="${arc(t, t + 1)}"/>${o.small ? '' : `<text class="slotn" x="${(Math.sin(mid) * d).toFixed(1)}" y="${(-Math.cos(mid) * d).toFixed(1)}">${t + 1}</text>`}`;
-  }
-  const ctr = o.c1 != null ? `<text class="ctr" y="${o.c2 ? -2 : 8}">${o.c1}</text>${o.c2 ? `<text class="ctr2" y="18">${o.c2}</text>` : ''}` : '';
-  return `<svg class="clock${o.small ? ' small' : ''}" viewBox="-104 -104 208 208" role="group" aria-label="${o.aria || `하루 ${hours}시간 시계`}">${g}${ctr}</svg>`;
-}
-const piecesOf = (seq, cost, pop) => seq.map((k, i) => ({ k, len: cost[k], pop: pop && pop.has(i) }));
-/* 주문서: 만든 양이 주문을 얼마나 채웠는지 아이콘으로 */
-function orderHTML(made, need) {
-  const row = k => Array.from({ length: need[k] }, (_, i) => `<i class="${i < made[k] ? 'got' : 'miss'}">${IC[k]}</i>`).join('') + (made[k] > need[k] ? `<b class="plus">+${made[k] - need[k]}</b>` : '');
-  return `<div class="order" aria-label="주문서: 물고기 ${made.fish}/${need.fish}, 열매 ${made.fruit}/${need.fruit}"><b>📜 주문서</b><span class="nw">${row('fish')}</span><span class="nw">${row('fruit')}</span></div>`;
-}
-const longOf = cost => cost.fish > cost.fruit ? 'fish' : 'fruit';
-function workHTML(st, cost, hours, need) {
-  const u = usedH(st.seq, cost), m = madeOf(st.seq), L = longOf(cost), S2 = L === 'fish' ? 'fruit' : 'fish', n = cost[L] / cost[S2];
-  const label = p => p.k === L ? `${GN[p.k]} 조각 ${cost[p.k]}시간. 누르면 ${GN[S2]} 조각 ${n}개로 바뀌어요` : `${GN[p.k]} 조각 ${cost[p.k]}시간. 누르면 빠져요`;
-  return `<div class="clockwrap">${clockSVG(piecesOf(st.seq, cost, st.pop), hours, { click: true, label, c1: hours - u, c2: '남은 시간' })}</div>
-    ${need ? orderHTML(m, need) : ''}
-    <div class="row center"><button type="button" class="btn" id="wb-f" ${u >= hours ? 'disabled' : ''}>${IC.fish} 물고기 조각 (${cost.fish}시간)</button>
-      <button type="button" class="btn" id="wb-r" ${u >= hours ? 'disabled' : ''}>${IC.fruit} 열매 조각 (${cost.fruit}시간)</button>
-      <button type="button" class="btn ghost small" id="wb-x" ${st.seq.length ? '' : 'disabled'}>↺ 처음부터</button></div>
-    <p class="note center">시계에 든 ${GN[L]} 조각을 누르면 같은 시간만큼 ${GN[S2]} 조각 ${n}개로 바뀌고, ${GN[S2]} 조각을 누르면 빠져요.</p>
-    <div class="out"><b>🎒 만든 양</b><span>${IC.fish} ${m.fish} · ${IC.fruit} ${m.fruit} · 남은 시간 ${hours - u}시간</span></div>`;
-}
-/* 조각 넣기·빼기·바꾸기. onChange(ev): ev.noroom이면 들어갈 자리가 없다는 뜻 */
-function bindWork(sh, st, cost, hours, onChange) {
-  const add = (id, k) => { const b = sh.querySelector(id); if (b) b.onclick = () => {
-    const free = hours - usedH(st.seq, cost);
-    if (cost[k] > free) { sfx('no'); onChange({ noroom: `${GN[k]} 조각은 ${cost[k]}시간짜리라 남은 ${free}시간에 들어가지 않아요.` }); return; }
-    sfx('sel'); st.seq.push(k); st.pop = new Set([st.seq.length - 1]); onChange({ add: k });
-    const nb = sh.querySelector(id); if (nb && !nb.disabled) nb.focus();
-  }; };
-  add('#wb-f', 'fish'); add('#wb-r', 'fruit');
-  const x = sh.querySelector('#wb-x'); if (x) x.onclick = () => { sfx('sel'); st.seq.length = 0; st.pop = null; onChange({ clear: true }); };
-  const L = longOf(cost), S2 = L === 'fish' ? 'fruit' : 'fish', n = cost[L] / cost[S2];
-  const hit = el => {
-    const i = +el.dataset.i, k = st.seq[i];
-    if (k === L) { st.seq.splice(i, 1, ...Array(n).fill(S2)); st.pop = new Set(Array.from({ length: n }, (_, j) => i + j)); sfx('ok'); onChange({ swap: k }); }
-    else { st.seq.splice(i, 1); st.pop = null; sfx('sel'); onChange({ remove: k }); }
-    const nb = sh.querySelector(`.clock [data-i="${Math.min(i, st.seq.length - 1)}"]`); if (nb) nb.focus({ preventScroll: true });
-  };
-  sh.querySelectorAll('.clock [data-i]').forEach(el => {
-    el.onclick = () => hit(el);
-    el.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); hit(el); } };
-  });
+  for (let t = h; t < hours; t++) g += `<path class="slot" d="${arc(t, t + 1)}"/>`;
+  return `<svg class="clock${o.small ? ' small' : ''}" viewBox="-104 -104 208 208" role="img" aria-label="${o.aria || `하루 ${hours}시간 시계`}">${g}</svg>`;
 }
 
 /* =========================================================
@@ -1570,7 +1508,7 @@ function warp(x, y, dir = 'down') {
   P.mode = 'land'; P.x = x; P.y = y; P.px = x * TILE; P.py = y * TILE; P.moving = false; P.path = null; P.dir = dir;
   resetTrail(); P.island = islandAt(x, y); updateMusic(); save();
 }
-/* cfg: cost(1개에 드는 시간), hours, need(주문서), at(WORK_PLACES의 마을), day(그 활동에서 며칠째인지).
+/* cfg: cost(1개에 드는 시간), hours, need(주문서), at(WORK_PLACES의 마을), day(그 활동에서 며칠째인지), info(작업 막대에 덧붙일 HTML).
    이야기 진행 중(run 안)에 불러도 그동안은 걸어 다닐 수 있다.
    2일째부터는 손에 익어 짧게 걸리는 물건(토끼 마을 열매, 여우 마을 물고기)을 Ⓐ 한 번에 2개씩 얻는다 */
 function workDay(cfg) {
@@ -1601,7 +1539,7 @@ function workBar() {
   const w = G.work, left = workLeft(), n = w.need;
   b.innerHTML = `<span class="wb-clock">⏰ <b>${left}</b>시간 남음</span><span class="nw">🎒 ${IC.fish}${w.bag.fish} ${IC.fruit}${w.bag.fruit}</span>
     ${n ? `<span class="nw">📜 ${IC.fish}${w.bag.fish}/${n.fish} ${IC.fruit}${w.bag.fruit}/${n.fruit}</span>` : ''}
-    ${w.per > 1 ? `<span class="nw wb-x2">✋ ${IC[w.short]} ${w.per}${GD[w.short].u}씩</span>` : ''}
+    ${w.info || ''}${w.per > 1 ? `<span class="nw wb-x2">✋ ${IC[w.short]} ${w.per}${GD[w.short].u}씩</span>` : ''}
     <button type="button" id="wb-end">🌙 일 마치기</button>${w.msg ? `<span class="wb-msg" aria-live="polite">${w.msg}</span>` : ''}`;
   $('wb-end').onclick = () => { sfx('sel'); if (!G.work || G.work.fishing) return; if (left && !confirm(`남은 ${left}시간을 쓰지 않고 오늘 일을 마칠까요?`)) return; endWork(); };
 }
@@ -1819,8 +1757,8 @@ function marketBoard(cfg) {
 }
 
 /* =========================================================
-   이레 운영판 (선택 활동 시장 운영)
-   날마다 12시간 생산 → 그날 값으로 교환(폭풍 날은 시장이 닫힘) → 물고기 3·열매 5를 먹음 → 남은 것은 창고로.
+   시장 운영 이레 (선택 활동): 날마다 아침에 토끼 마을 지도에서 12시간 일하고(workDay),
+   저녁에 시장판에서 그날 값으로 바꾼 뒤(폭풍 날은 시장이 닫힘) 물고기 3·열매 5를 먹는다. 남은 것은 창고로.
    ========================================================= */
 const MARKET_STORMS = [[3, 5], [3, 6], [3, 7], [4, 6], [4, 7], [5, 7]];
 const hungerOf = log => log.filter(d => d.hungry).length;
@@ -1861,21 +1799,42 @@ function weekLedger(log) {
   return `<div class="tw"><table class="ledger"><thead><tr><th>날</th><th>날씨 · 값</th><th>만든 양</th><th>바꾼 것</th><th>먹고 난 뒤</th></tr></thead><tbody>${log.map((d, i) => { const [a, b] = d.rate;
     return `<tr class="${i === log.length - 1 ? 'new' : ''}"><td>${d.day}</td><td>${d.storm ? '⛈️ 휴장' : `<span class="nw">☀️ ${a}:${b}</span>`}</td><td>${stockTxt(d.made)}</td><td>${d.n ? `<span class="nw">${IC.fruit}${b * d.n}→${IC.fish}${a * d.n}</span>` : '—'}</td><td>${d.hungry ? `😢 ${shortIcon(d.af, NEED)}` : `😊 ${stockTxt(d.end)}`}</td></tr>`; }).join('')}</tbody></table></div>`;
 }
-/* cfg: storms, rates(날마다), hints, intro */
-function weekBoard(cfg) {
+/* 이레 치 날씨와 값 예보. d일째를 '오늘'로 표시 */
+function weekForecast(cfg, d) {
+  return `<div class="wx" aria-label="날씨와 시장 값 예보">${cfg.rates.map((r, i) => `<span class="${i + 1 < d ? 'past' : i + 1 === d ? 'now' : ''}"><small>${i + 1}일</small>${cfg.storms.includes(i + 1) ? '⛈️' : '☀️'}<small>${cfg.storms.includes(i + 1) ? '휴장' : `${r[0]}:${r[1]}`}</small></span>`).join('')}</div>`;
+}
+/* cfg: storms, rates(날마다), hints. 끝나면 { store, log } */
+async function weekQuest(cfg) {
+  const days = cfg.rates.length, st = { store: { fish: 0, fruit: 0 }, log: [], hint: 0 };
+  for (let d = 1; d <= days; d++) {
+    const stormy = cfg.storms.includes(d), rate = cfg.rates[d - 1], next = d < days && cfg.storms.includes(d + 1);
+    await fadeTo(() => warp(13, 29, 'up'));
+    toast(`${stormy ? '⛈️' : '☀️'} ${d}일째 아침 · 토끼 마을`, 'gold', 2400);
+    showCard(`<h3>📦 시장 운영 <span class="nw">${d}/${days}일째 아침</span></h3>${weekForecast(cfg, d)}
+      <p class="note center">예보의 값은 물고기:열매 · 날마다 먹는 양 <span class="nw">${IC.fish}${NEED.fish} ${IC.fruit}${NEED.fruit}</span></p>
+      <div class="out"><b>📦 창고</b><span>${stockTxt(st.store)}</span></div>`);
+    await say('tori', (stormy ? '오늘은 폭풍이라 저녁에 시장이 닫혀. 창고와 오늘 만든 것으로 버텨야 해.' : `오늘 시장 값은 ${amt('fish', rate[0])} = ${amt('fruit', rate[1])}야.`)
+      + (next ? ' 내일은 폭풍이야! 오늘 미리 대비하자.' : '')
+      + (d === 1 ? ' 과수원은 서쪽, 낚시터는 남쪽 부두야.' : d === 2 ? ' 그리고 손에 익었으니 오늘부터 열매는 Ⓐ 한 번에 2개씩 딸 수 있어.' : ''));
+    const made = await workDay({ cost: HR.r, hours: DAY_H, day: d,
+      info: `<span class="nw">📦창고 ${IC.fish}${st.store.fish} ${IC.fruit}${st.store.fruit}</span><span class="nw">${stormy ? '⛈️ 오늘 휴장' : `☀️ 오늘 ${IC.fish}${rate[0]}=${IC.fruit}${rate[1]}`}${next ? ' · 내일 ⛈️' : ''}</span>` });
+    if (!stormy) await fadeTo(() => warp(28, 19, 'up'));
+    await weekEvening(cfg, st, d, made);
+  }
+  return st;
+}
+/* 저녁 시장판: 창고와 그날 만든 것으로 바꾸고(폭풍 날은 시장이 닫힘) 먹는다. st.store·st.log를 바꾼다 */
+function weekEvening(cfg, st, d, made) {
   return new Promise(resolve => {
-    const days = cfg.rates.length;
-    const st = { day: 1, store: { fish: 0, fruit: 0 }, seq: [], pop: null, n: 0, log: [], said: cfg.intro || '', done: false, hint: 0 };
+    const days = cfg.rates.length, stormy = cfg.storms.includes(d), rate = cfg.rates[d - 1];
+    const have = { fish: st.store.fish + made.fish, fruit: st.store.fruit + made.fruit };
+    const max = stormy ? 0 : Math.min(Math.floor(have.fruit / rate[1]), Math.floor(BEAR_FISH / rate[0]));
+    const v = { n: 0, said: '', done: false, store0: st.store };
     const sh = openModal(false);
-    const storm = d => cfg.storms.includes(d);
     const calc = () => {
-      const stormy = storm(st.day), rate = cfg.rates[st.day - 1], made = madeOf(st.seq);
-      const have = { fish: st.store.fish + made.fish, fruit: st.store.fruit + made.fruit };
-      const max = stormy ? 0 : Math.min(Math.floor(have.fruit / rate[1]), Math.floor(BEAR_FISH / rate[0]));
-      st.n = Math.min(st.n, max);
-      const af = stormy ? have : { fish: have.fish + rate[0] * st.n, fruit: have.fruit - rate[1] * st.n };
+      const af = stormy ? have : { fish: have.fish + rate[0] * v.n, fruit: have.fruit - rate[1] * v.n };
       const end = { fish: Math.max(0, af.fish - NEED.fish), fruit: Math.max(0, af.fruit - NEED.fruit) };
-      return { stormy, rate, made, max, n: st.n, af, end, hungry: af.fish < NEED.fish || af.fruit < NEED.fruit };
+      return { stormy, rate, made, n: v.n, af, end, hungry: af.fish < NEED.fish || af.fruit < NEED.fruit };
     };
     const voice = o => {
       const [a, b] = o.rate, L = [o.stormy ? '⛈️ 폭풍이라 시장이 닫혔어요.' : o.n ? `🤝 열매 ${b * o.n}개를 물고기 ${a * o.n}마리와 바꿨어요.` : '오늘은 바꾸지 않았어요.'];
@@ -1883,48 +1842,46 @@ function weekBoard(cfg) {
       return L.join('<br>');
     };
     const render = () => {
-      const o = calc(), full = usedH(st.seq, HR.r) === DAY_H, shown = st.done ? days : st.day;
-      const wx = `<div class="wx" aria-label="날씨와 시장 값 예보">${cfg.rates.map((r, i) => `<span class="${st.done || i + 1 < st.day ? 'past' : i + 1 === st.day ? 'now' : ''}"><small>${i + 1}일</small>${storm(i + 1) ? '⛈️' : '☀️'}<small>${storm(i + 1) ? '휴장' : `${r[0]}:${r[1]}`}</small></span>`).join('')}</div>`;
-      const tradeBox = o.stormy ? '<div class="trade storm"><div class="trade-row">⛈️ 폭풍이라 시장이 닫혔어요. 창고와 오늘 만든 것으로만 버텨야 해요.</div></div>'
-        : `<div class="trade"><div class="trade-row">🤝 바꿀 횟수 <span class="step"><button type="button" id="n-" aria-label="바꿀 횟수 줄이기" ${o.n <= 0 ? 'disabled' : ''}>−</button><output>${o.n}</output><button type="button" id="n+" aria-label="바꿀 횟수 늘리기" ${o.n >= o.max ? 'disabled' : ''}>+</button></span>번
-          <span class="note nw">${IC.fruit}${o.rate[1] * o.n} 내고 ${IC.fish}${o.rate[0] * o.n} 받기</span></div></div>`;
-      const prep = st.done || st.day >= days || !storm(st.day + 1) ? '' : `<div class="prep">⛈️ <b>내일은 폭풍!</b> 시장이 닫혀요. 이대로면 내일 버틸 수 있을까? ${canWeather(o.end) ? '<span class="res-ok">버틸 수 있어요</span>' : '<span class="res-no">모자라요</span>'}</div>`;
-      sh.innerHTML = `<h2>📦 교역섬 시장 운영 <span class="nw">${shown}/${days}일째</span></h2><p class="sub">용돌이가 토끼 마을에서 날마다 12시간 일하고, 그날 값으로 바꿔요. 예보의 값은 물고기:열매예요.</p>
+      const o = calc();
+      const tradeBox = stormy ? '<div class="trade storm"><div class="trade-row">⛈️ 폭풍이라 시장이 닫혔어요. 창고와 오늘 만든 것으로만 버텨야 해요.</div></div>'
+        : `<div class="trade"><div class="trade-row">🤝 바꿀 횟수 <span class="step"><button type="button" id="n-" aria-label="바꿀 횟수 줄이기" ${o.n <= 0 ? 'disabled' : ''}>−</button><output>${o.n}</output><button type="button" id="n+" aria-label="바꿀 횟수 늘리기" ${o.n >= max ? 'disabled' : ''}>+</button></span>번
+          <span class="note nw">${IC.fruit}${rate[1] * o.n} 내고 ${IC.fish}${rate[0] * o.n} 받기</span></div></div>`;
+      const prep = d >= days || !cfg.storms.includes(d + 1) ? '' : `<div class="prep">⛈️ <b>내일은 폭풍!</b> 시장이 닫혀요. 이대로면 내일 버틸 수 있을까? ${canWeather(o.end) ? '<span class="res-ok">버틸 수 있어요</span>' : '<span class="res-no">모자라요</span>'}</div>`;
+      sh.innerHTML = `<h2>🌙 ${d}일째 저녁 · ${stormy ? '⛈️ 폭풍' : '교역섬 시장'} <span class="nw">${d}/${days}</span></h2>
         <div class="goalbar">날마다 먹는 양 <span class="nw">${IC.fish}${NEED.fish} ${IC.fruit}${NEED.fruit}</span> · <span class="nw">굶은 날 ${hungerOf(st.log)}번</span><br><span class="note">먹고 남은 것은 창고에 쌓여 다음 날 쓸 수 있어요.</span></div>
-        ${wx}
-        ${st.done ? `<p class="j">마지막 창고 ${stockTxt(st.store)}</p>` : `<div class="today ${o.stormy ? 'storm' : ''}">${o.stormy ? '⛈️ 오늘은 폭풍' : `☀️ 오늘 값 ${rateTxt(o.rate)}`}</div>
-        <div class="out"><b>📦 창고</b><span>${stockTxt(st.store)}</span></div>
-        ${workHTML(st, HR.r, DAY_H)}${tradeBox}
+        ${weekForecast(cfg, d)}
+        ${v.done ? '' : `<div class="today ${stormy ? 'storm' : ''}">${stormy ? '⛈️ 오늘은 폭풍' : `☀️ 오늘 값 ${rateTxt(rate)}`}</div>
+        <div class="out"><b>📦 창고</b><span>${stockTxt(v.store0)}</span></div>
+        <div class="out"><b>🎒 오늘 만든 것</b><span>${stockTxt(made)}</span></div>
+        ${tradeBox}
         <div class="out"><b>먹기 전</b><span>${stockTxt(o.af)}</span></div>
         <div class="need"><span class="note">오늘 먹을 양</span>${needChip('fish', o.af.fish, NEED.fish)}${needChip('fruit', o.af.fruit, NEED.fruit)}</div>
         <div class="out"><b>내일 창고</b><span>${stockTxt(o.end)}</span></div>${prep}`}
-        ${st.said}
-        <div class="row">${st.done ? '<button type="button" class="btn" id="db-next">다음 ▶</button>'
-          : full ? `<button type="button" class="btn" id="db-go">${o.stormy ? '⛈️' : '☀️'} 이대로 하루 보내기</button>` : '<span class="note">12시간을 다 채우면 하루를 보낼 수 있어요.</span>'}
-        ${cfg.hints && !st.done ? '<button type="button" class="btn ghost small" id="db-hint">💬 동료에게 묻기</button>' : ''}
+        ${v.said}
+        <div class="row">${v.done ? `<button type="button" class="btn" id="db-next">${d >= days ? '다음 ▶' : '🌙 자러 가기 · 다음 날 ▶'}</button>`
+          : `<button type="button" class="btn" id="db-go">${stormy ? '⛈️' : '🍽️'} 이대로 먹고 하루 마치기</button>`}
+        ${cfg.hints && !v.done ? '<button type="button" class="btn ghost small" id="db-hint">💬 동료에게 묻기</button>' : ''}
         <button type="button" class="btn ghost small" id="db-note">📒 수첩</button></div>
         <h3>📒 날마다 장부</h3>${weekLedger(st.log)}`;
-      st.pop = null;
-      if (!st.done) bindWork(sh, st, HR.r, DAY_H, ev => { st.said = ev.noroom ? sayHTML('sys', ev.noroom) : st.said; render(); });
-      const step = (id, d) => { const el = sh.querySelector(id); if (el) el.onclick = () => { sfx('sel'); st.n = clamp(st.n + d, 0, o.max); render(); const nb = sh.querySelector(id); if (nb && !nb.disabled) nb.focus(); }; };
+      const step = (id, dd) => { const el = sh.querySelector(id); if (el) el.onclick = () => { sfx('sel'); v.n = clamp(v.n + dd, 0, max); render(); const nb = sh.querySelector(id); if (nb && !nb.disabled) nb.focus(); }; };
       step('#n-', -1); step('#n\\+', 1);
       const go = sh.querySelector('#db-go');
       if (go) go.onclick = () => {
-        st.log.push({ day: st.day, storm: o.stormy, rate: o.rate, made: o.made, n: o.stormy ? 0 : o.n, af: o.af, end: o.end, hungry: o.hungry });
-        st.store = o.end;
-        if (st.day >= days) st.done = true; else st.day++;
-        st.said = sayHTML('sys', voice(o)) + (st.done && cfg.end ? cfg.end(st) : '');
-        sfx(o.hungry ? 'no' : st.done ? 'win' : 'ok');
+        const r = calc();
+        st.log.push({ day: d, storm: stormy, rate, made, n: stormy ? 0 : r.n, af: r.af, end: r.end, hungry: r.hungry });
+        st.store = r.end; v.done = true;
+        v.said = sayHTML('sys', voice(r));
+        sfx(r.hungry ? 'no' : d >= days ? 'win' : 'ok');
         render(); scrollSay(sh);
       };
       const hb = sh.querySelector('#db-hint');
       if (hb) hb.onclick = () => {
         sfx('sel'); S.stats.hint++;
         const [w, t] = cfg.hints[Math.min(st.hint, cfg.hints.length - 1)]; st.hint = Math.min(st.hint + 1, cfg.hints.length);
-        st.said = sayHTML(w, t, 'hint'); render(); scrollSay(sh);
+        v.said = sayHTML(w, t, 'hint'); render(); scrollSay(sh);
       };
       sh.querySelector('#db-note').onclick = () => { sfx('sel'); openNotebook(); };
-      const nx = sh.querySelector('#db-next'); if (nx) { nx.onclick = () => { sfx('sel'); closeModal(); resolve(st); }; setTimeout(() => nx.focus(), 50); }
+      const nx = sh.querySelector('#db-next'); if (nx) { nx.onclick = () => { sfx('sel'); closeModal(); resolve(); }; setTimeout(() => nx.focus(), 50); }
     };
     render();
   });
@@ -2324,9 +2281,11 @@ async function marketQuest() {
     await say('peng2', '목표는 이레 동안 한 번도 굶지 않기예요!');
     S.f.marketMet = true;
   } else if (await ask('peng2', S.f.marketDone ? '한 번 더 해 볼래요? 날씨와 값은 새로 정해져요.' : '시장 운영을 다시 해 볼래요?', ['좋아요', '다음에요'])) return;
+  await say('peng2', '창고는 비어 있어요. 아침마다 토끼 마을에서 일하고, 저녁에 여기 시장으로 와요. 첫날부터 시작해 볼까요?');
   Dlg.close();
   const wk = makeWeek();
-  const st = await weekBoard({ storms: wk.storms, rates: wk.rates, hints: MARKET_HINTS, intro: sayHTML('peng2', '창고는 비어 있어요. 예보를 보고 첫날부터 시작해 볼까요?') });
+  const st = await weekQuest({ storms: wk.storms, rates: wk.rates, hints: MARKET_HINTS });
+  await fadeTo(() => warp(24, 19, 'up'));
   const h = hungerOf(st.log);
   S.store = st.store; S.market = { best: Math.min(S.market ? S.market.best : h, h), tries: (S.market ? S.market.tries : 0) + 1 };
   const first = !S.f.marketDone; S.f.marketDone = true; save();
@@ -2610,6 +2569,8 @@ cv.addEventListener('pointerdown', e => {
 });
 // 길게 누르기를 시작한 손가락을 떼면(화면 어디에서 떼든) 멈춘다
 ['pointerup', 'pointercancel'].forEach(ev => window.addEventListener(ev, e => { if (AH.ptr != null && e.pointerId === AH.ptr) aUp(); }));
+// 화면 버튼·지도를 길게 누르거나 두 손가락으로 누를 때 브라우저 메뉴(우클릭 메뉴)가 뜨지 않게 한다
+['hud', 'stage', 'pad'].forEach(id => $(id).addEventListener('contextmenu', e => e.preventDefault()));
 $('btn-note').onclick = () => { sfx('sel'); ac(); openNotebook(); };
 $('btn-hint').onclick = () => { sfx('sel'); ac(); if (G.work) { workSay('과수원은 마을 서쪽(열매나무 앞에서 Ⓐ), 낚시터는 남쪽 부두(바다를 보고 Ⓐ)예요.'); return; } if (canControl()) run(hintTalk); };
 $('btn-menu').onclick = () => { sfx('sel'); ac(); openMenu(); };
