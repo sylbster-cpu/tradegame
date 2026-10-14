@@ -316,6 +316,8 @@ button.wk:hover{border-color:var(--grn)}
 .dots i{width:12px;height:12px;border-radius:50%;background:var(--line)}
 .dots i.o{background:var(--ok)}.dots i.ng{background:var(--no)}.dots i.now{background:var(--sun)}
 td.win{background:var(--okbg);color:var(--ok);font-weight:700}
+/* 풀이표 기회비용: 좁은 화면에서는 단위(Y재)를 늘 윗줄에 두어 칸마다 줄바꿈이 같게 */
+@media (max-width:560px){.oc-u{display:block}}
 
 /* 수첩 */
 .pages{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(300px,100%),1fr));gap:10px}
@@ -2116,8 +2118,8 @@ function pickK(lo, hi, mode) {
   return rnd(inside.length ? inside : c);
 }
 function makeBoss(type) {
-  if (type === 'A') for (;;) { const a1 = rnd(OUTV), b1 = rnd(OUTV), a2 = rnd(OUTV), b2 = rnd(OUTV); if (a1 === a2 || b1 === b2 || a1 * b2 === a2 * b1) continue; return { type, t: [[a1, b1], [a2, b2]], oc: [[new F(b1, a1), new F(a1, b1)], [new F(b2, a2), new F(a2, b2)]], abs: [a1 > a2 ? 0 : 1, b1 > b2 ? 0 : 1] }; }
-  if (type === 'B') for (;;) { const a1 = ri(2, 12), b1 = ri(2, 12), a2 = ri(2, 12), b2 = ri(2, 12); if (a1 === a2 || b1 === b2 || a1 * b2 === a2 * b1) continue; return { type, t: [[a1, b1], [a2, b2]], oc: [[new F(a1, b1), new F(b1, a1)], [new F(a2, b2), new F(b2, a2)]], abs: [a1 < a2 ? 0 : 1, b1 < b2 ? 0 : 1] }; }
+  if (type === 'A') for (;;) { const a1 = rnd(OUTV), b1 = rnd(OUTV), a2 = rnd(OUTV), b2 = rnd(OUTV); if (a1 === a2 || b1 === b2 || a1 * b2 === a2 * b1) continue; return { type, t: [[a1, b1], [a2, b2]], raw: [[[b1, a1], [a1, b1]], [[b2, a2], [a2, b2]]], oc: [[new F(b1, a1), new F(a1, b1)], [new F(b2, a2), new F(a2, b2)]], abs: [a1 > a2 ? 0 : 1, b1 > b2 ? 0 : 1] }; }
+  if (type === 'B') for (;;) { const a1 = ri(2, 12), b1 = ri(2, 12), a2 = ri(2, 12), b2 = ri(2, 12); if (a1 === a2 || b1 === b2 || a1 * b2 === a2 * b1) continue; return { type, t: [[a1, b1], [a2, b2]], raw: [[[a1, b1], [b1, a1]], [[a2, b2], [b2, a2]]], oc: [[new F(a1, b1), new F(b1, a1)], [new F(a2, b2), new F(b2, a2)]], abs: [a1 < a2 ? 0 : 1, b1 < b2 ? 0 : 1] }; }
   for (;;) { const p = new F(...rnd(OCS)), q = new F(...rnd(OCS)); if (p.eq(q)) continue; return { type: 'C', oc: [[p, p.inv()], [q, q.inv()]], show: [rnd([0, 1]), rnd([0, 1])] }; }
 }
 function bossStem(P0) {
@@ -2132,10 +2134,16 @@ function bossStem(P0) {
     <div class="tw"><table><thead><tr><th>구분</th><th>갑국</th><th>을국</th></tr></thead><tbody>
     <tr><th>X재 1단위 생산의 기회비용</th><td>${r0[0]}</td><td>${r0[1]}</td></tr><tr><th>Y재 1단위 생산의 기회비용</th><td>${r1[0]}</td><td>${r1[1]}</td></tr></tbody></table></div>`;
 }
+/* 기회비용 값: 표에서 나눈 그대로의 분수가 약분되면 '6/30 = 1/5'처럼 함께 적는다(기회비용 표 C형은 주어진 값 그대로) */
+function ocHTML(P0, i, g) {
+  const c = P0.oc[i][g]; if (!P0.raw) return c.html();
+  const [n, d] = P0.raw[i][g]; if (n === c.n && d === c.d) return c.html();
+  return `<span class="nw"><span class="fr"><span>${n}</span><span>${d}</span></span> = ${c.html()}</span>`;
+}
 function bossTable(P0) {
   return `<div class="tw"><table><thead><tr><th>기회비용</th><th>갑국</th><th>을국</th></tr></thead><tbody>
-    <tr><th>X재 1단위</th><td>Y재 ${P0.oc[0][0].html()}</td><td>Y재 ${P0.oc[1][0].html()}</td></tr>
-    <tr><th>Y재 1단위</th><td>X재 ${P0.oc[0][1].html()}</td><td>X재 ${P0.oc[1][1].html()}</td></tr></tbody></table></div>`;
+    <tr><th>X재 1단위</th><td><span class="oc-u">Y재</span> ${ocHTML(P0, 0, 0)}</td><td><span class="oc-u">Y재</span> ${ocHTML(P0, 1, 0)}</td></tr>
+    <tr><th>Y재 1단위</th><td><span class="oc-u">X재</span> ${ocHTML(P0, 0, 1)}</td><td><span class="oc-u">X재</span> ${ocHTML(P0, 1, 1)}</td></tr></tbody></table></div>`;
 }
 function genExam(type, ty) {
   const P0 = makeBoss(type), low = g => P0.oc[0][g].cmp(P0.oc[1][g]) < 0 ? 0 : 1;
@@ -2145,10 +2153,10 @@ function genExam(type, ty) {
     const gg = P0.type === 'C' ? 1 - P0.show[i] : g, c = P0.oc[i][gg];
     let v = yes ? c : c.inv(); if (!yes && v.eq(c)) v = new F(c.n * 2, c.d);
     st = `${NAT[i]}의 ${GG[gg]} 1단위 생산의 기회비용은 ${GG[1 - gg]} <span class="nw">${v.html()}단위</span>이다.`; tr = v.eq(c);
-    why = `${NAT[i]}의 ${GG[gg]} 1단위 기회비용은 ${GG[1 - gg]} <span class="nw">${c.html()}단위</span>예요.`;
+    why = `${NAT[i]}의 ${GG[gg]} 1단위 기회비용은 ${GG[1 - gg]} <span class="nw">${ocHTML(P0, i, gg)}단위</span>예요.`;
   } else if (ty === 'cmp') {
     st = `${GG[g]} 1단위 생산의 기회비용은 ${jo(NAT[i], '이', '가')} ${NAT[1 - i]}보다 작다.`; tr = P0.oc[i][g].cmp(P0.oc[1 - i][g]) < 0;
-    why = `${GG[g]} 1단위: 갑국 ${P0.oc[0][g].html()}, 을국 ${P0.oc[1][g].html()}`;
+    why = `${GG[g]} 1단위: 갑국 ${ocHTML(P0, 0, g)}, 을국 ${ocHTML(P0, 1, g)}`;
   } else if (ty === 'comp' || ty === 'export') {
     st = ty === 'comp' ? `${jo(NAT[i], '은', '는')} ${GG[g]} 생산에 비교 우위를 가진다.` : `양국이 교역하면 ${jo(NAT[i], '은', '는')} ${jo(GG[g], '을', '를')} 수출한다.`;
     tr = low(g) === i;
