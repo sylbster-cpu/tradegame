@@ -218,6 +218,10 @@ button.wk:hover{border-color:var(--grn)}
 .wx small{font-size:.75rem;color:var(--muted)}
 .wx .now{border-color:var(--sun);box-shadow:0 0 0 2px var(--sun)}
 .wx .past{opacity:.45}
+.wx .scarce{border-color:var(--no)}
+.wx .scarce small:last-child{color:var(--no);font-weight:700}
+.wx-key{margin:-4px 0 6px}
+.prep.dear{background:var(--nobg);border-color:var(--no);margin:0 0 8px}
 .prep{margin-top:10px;padding:8px 12px;border-radius:12px;background:var(--midbg);border:2px solid var(--mid);font-family:"Jua",sans-serif;line-height:1.5}
 .ledger{width:100%;border-collapse:collapse;margin-top:6px;font-size:.95rem}
 .ledger th,.ledger td{border:1px solid var(--line);padding:5px 6px;text-align:center}
@@ -1862,6 +1866,9 @@ function marketBoard(cfg) {
    저녁에 시장판에서 그날 값으로 바꾼 뒤(폭풍 날은 시장이 닫힘) 물고기 3·열매 5를 먹는다. 남은 것은 창고로.
    ========================================================= */
 const MARKET_STORMS = [[3, 5], [3, 6], [3, 7], [4, 6], [4, 7], [5, 7]];
+/* 물고기 품귀 날 값(곰 마을 물고기가 귀한 날): 물고기 1마리 = 열매 8개. 토끼 마을이 직접 잡을 때 포기하는 열매 6개보다 비싸서(교환 비율이 두 마을 기회비용 범위 밖),
+   그날은 사지 않고 직접 잡거나 미리 사 둔 것으로 버티는 쪽이 낫다. 이레 중 하루, 첫날·폭풍 날이 아닌 날에 온다 */
+const SCARCE_RATE = [1, 8];
 const hungerOf = log => log.filter(d => d.hungry).length;
 /* 창고 s로 그날을 굶지 않고 넘겼을 때 가능한 다음 창고들 */
 function weekNext(s, rate, storm) {
@@ -1890,35 +1897,37 @@ function weekSolvable(rates, storms) {
 function makeWeek() {
   if (G.forceWeek) return G.forceWeek;
   for (let i = 0; i < 300; i++) {
-    const storms = rnd(MARKET_STORMS), rates = Array.from({ length: 7 }, () => rnd(RATES));
-    if (weekSolvable(rates, storms)) return { storms, rates };
+    const storms = rnd(MARKET_STORMS), scarce = rnd([2, 3, 4, 5, 6, 7].filter(d => !storms.includes(d)));
+    const rates = Array.from({ length: 7 }, (_, k) => k + 1 === scarce ? SCARCE_RATE : rnd(RATES));
+    if (weekSolvable(rates, storms)) return { storms, rates, scarce };
   }
-  return { storms: [3, 6], rates: Array.from({ length: 7 }, () => [1, 1]) };
+  return { storms: [3, 6], scarce: 5, rates: [[1, 1], [1, 2], [1, 1], [1, 1], SCARCE_RATE, [1, 1], [1, 1]] };
 }
 function weekLedger(log) {
   if (!log.length) return '<p class="note">아직 보낸 날이 없어요.</p>';
   return `<div class="tw"><table class="ledger"><thead><tr><th>날</th><th>날씨 · 값</th><th>만든 양</th><th>바꾼 것</th><th>먹고 난 뒤</th></tr></thead><tbody>${log.map((d, i) => { const [a, b] = d.rate;
-    return `<tr class="${i === log.length - 1 ? 'new' : ''}"><td>${d.day}</td><td>${d.storm ? '⛈️ 휴장' : `<span class="nw">☀️ ${a}:${b}</span>`}</td><td>${stockTxt(d.made)}</td><td>${d.n ? `<span class="nw">${IC.fruit}${b * d.n}→${IC.fish}${a * d.n}</span>` : '—'}</td><td>${d.hungry ? `😢 ${shortIcon(d.af, NEED)}` : `😊 ${stockTxt(d.end)}`}</td></tr>`; }).join('')}</tbody></table></div>`;
+    return `<tr class="${i === log.length - 1 ? 'new' : ''}"><td>${d.day}</td><td>${d.storm ? '⛈️ 휴장' : `<span class="nw">${d.scarce ? '💸' : '☀️'} ${a}:${b}</span>`}</td><td>${stockTxt(d.made)}</td><td>${d.n ? `<span class="nw">${IC.fruit}${b * d.n}→${IC.fish}${a * d.n}</span>` : '—'}</td><td>${d.hungry ? `😢 ${shortIcon(d.af, NEED)}` : `😊 ${stockTxt(d.end)}`}</td></tr>`; }).join('')}</tbody></table></div>`;
 }
 /* 이레 치 날씨와 값 예보. d일째를 '오늘'로 표시 */
 function weekForecast(cfg, d) {
-  return `<div class="wx" aria-label="날씨와 시장 값 예보">${cfg.rates.map((r, i) => `<span class="${i + 1 < d ? 'past' : i + 1 === d ? 'now' : ''}"><small>${i + 1}일</small>${cfg.storms.includes(i + 1) ? '⛈️' : '☀️'}<small>${cfg.storms.includes(i + 1) ? '휴장' : `${r[0]}:${r[1]}`}</small></span>`).join('')}</div>`;
+  return `<div class="wx" aria-label="날씨와 시장 값 예보">${cfg.rates.map((r, i) => `<span class="${i + 1 < d ? 'past' : i + 1 === d ? 'now' : ''}${cfg.scarce === i + 1 ? ' scarce' : ''}"><small>${i + 1}일</small>${cfg.storms.includes(i + 1) ? '⛈️' : cfg.scarce === i + 1 ? '💸' : '☀️'}<small>${cfg.storms.includes(i + 1) ? '휴장' : `${r[0]}:${r[1]}`}</small></span>`).join('')}</div>
+    ${cfg.scarce ? '<p class="note wx-key">💸 물고기 품귀: 곰 마을 물고기가 귀해 값이 비싼 날</p>' : ''}`;
 }
 /* cfg: storms, rates(날마다), hints. 끝나면 { store, log } */
 async function weekQuest(cfg) {
   const days = cfg.rates.length, st = { store: { fish: 0, fruit: 0 }, log: [], hint: 0 };
   for (let d = 1; d <= days; d++) {
-    const stormy = cfg.storms.includes(d), rate = cfg.rates[d - 1], next = d < days && cfg.storms.includes(d + 1);
+    const stormy = cfg.storms.includes(d), rate = cfg.rates[d - 1], next = d < days && cfg.storms.includes(d + 1), scarce = cfg.scarce === d, nextScarce = cfg.scarce === d + 1;
     await fadeTo(() => warp(13, 29, 'up'));
     toast(`${stormy ? '⛈️' : '☀️'} ${d}일째 아침 · 토끼 마을`, 'gold', 2400);
     showCard(`<h3>📦 시장 운영 <span class="nw">${d}/${days}일째 아침</span></h3>${weekForecast(cfg, d)}
       <p class="note center">예보의 값은 물고기:열매 · 날마다 먹는 양 <span class="nw">${IC.fish}${NEED.fish} ${IC.fruit}${NEED.fruit}</span></p>
       <div class="out"><b>📦 창고</b><span>${stockTxt(st.store)}</span></div>`);
-    await say('tori', (stormy ? '오늘은 폭풍이라 저녁에 시장이 닫혀. 창고와 오늘 만든 것으로 버텨야 해.' : `오늘 시장 값은 ${amt('fish', rate[0])} = ${amt('fruit', rate[1])}야.`)
-      + (next ? ' 내일은 폭풍이야! 오늘 미리 대비하자.' : '')
+    await say('tori', (stormy ? '오늘은 폭풍이라 저녁에 시장이 닫혀. 창고와 오늘 만든 것으로 버텨야 해.' : `${scarce ? '오늘은 물고기 품귀래. 곰 마을 물고기가 귀하대. ' : ''}오늘 시장 값은 ${amt('fish', rate[0])} = ${amt('fruit', rate[1])}야.`)
+      + (next ? ' 내일은 폭풍이야! 오늘 미리 대비하자.' : nextScarce ? ' 내일은 물고기 품귀래.' : '')
       + (d === 1 ? ' 과수원은 서쪽, 낚시터는 남쪽 부두야.' : d === 2 ? ' 그리고 손에 익었으니 오늘부터 열매는 Ⓐ 한 번에 2개씩 딸 수 있어.' : ''));
     const made = await workDay({ cost: HR.r, hours: DAY_H, day: d,
-      info: `<span class="nw">📦창고 ${IC.fish}${st.store.fish} ${IC.fruit}${st.store.fruit}</span><span class="nw">${stormy ? '⛈️ 오늘 휴장' : `☀️ 오늘 ${IC.fish}${rate[0]}=${IC.fruit}${rate[1]}`}${next ? ' · 내일 ⛈️' : ''}</span>` });
+      info: `<span class="nw">📦창고 ${IC.fish}${st.store.fish} ${IC.fruit}${st.store.fruit}</span><span class="nw">${stormy ? '⛈️ 오늘 휴장' : `${scarce ? '💸 오늘 품귀' : '☀️ 오늘'} ${IC.fish}${rate[0]}=${IC.fruit}${rate[1]}`}${next ? ' · 내일 ⛈️' : nextScarce ? ' · 내일 💸' : ''}</span>` });
     if (!stormy) await fadeTo(() => warp(28, 19, 'up'));
     await weekEvening(cfg, st, d, made);
   }
@@ -1927,7 +1936,7 @@ async function weekQuest(cfg) {
 /* 저녁 시장판: 창고와 그날 만든 것으로 바꾸고(폭풍 날은 시장이 닫힘) 먹는다. st.store·st.log를 바꾼다 */
 function weekEvening(cfg, st, d, made) {
   return new Promise(resolve => {
-    const days = cfg.rates.length, stormy = cfg.storms.includes(d), rate = cfg.rates[d - 1];
+    const days = cfg.rates.length, stormy = cfg.storms.includes(d), rate = cfg.rates[d - 1], scarce = cfg.scarce === d;
     const have = { fish: st.store.fish + made.fish, fruit: st.store.fruit + made.fruit };
     const max = stormy ? 0 : Math.min(Math.floor(have.fruit / rate[1]), Math.floor(BEAR_FISH / rate[0]));
     const v = { n: 0, said: '', done: false, store0: st.store };
@@ -1939,6 +1948,9 @@ function weekEvening(cfg, st, d, made) {
     };
     const voice = o => {
       const [a, b] = o.rate, L = [o.stormy ? '⛈️ 폭풍이라 시장이 닫혔어요.' : o.n ? `🤝 열매 ${b * o.n}개를 물고기 ${a * o.n}마리와 바꿨어요.` : '오늘은 바꾸지 않았어요.'];
+      // 물고기 품귀 날: 사서 더 쓴 열매(직접 잡을 때 포기하는 열매와 견줌), 또는 사지 않고 직접 잡았음
+      if (scarce && o.n) L.push(`💸 물고기 품귀 날이라 물고기 1마리에 열매 ${b / a}개를 냈어요. 직접 잡았으면 열매 ${HR.r.fish / HR.r.fruit}개만 포기하면 됐으니 열매 ${b * o.n - a * o.n * HR.r.fish / HR.r.fruit}개를 더 쓴 셈이에요.`);
+      else if (scarce && made.fish) L.push('🎣 물고기 품귀 날 시장에서 사지 않고 직접 잡았어요.');
       L.push(o.hungry ? `😢 ${shortTxt(o.af, NEED)}가 모자라 배를 곯았어요.` : o.end.fish + o.end.fruit ? `😊 배불리 먹었어요. 창고에 남은 것 ${stockTxt(o.end)}` : '🙂 딱 맞게 먹었어요. 창고에 남은 것은 없어요.');
       return L.join('<br>');
     };
@@ -1950,14 +1962,15 @@ function weekEvening(cfg, st, d, made) {
       const o = calc(), [a, b] = rate, next = d < days ? { storm: cfg.storms.includes(d + 1), rate: cfg.rates[d] } : null;
       const cell = (k, x, sign = '') => `<td>${x ? `${sign}${x}` : '0'}</td>`;
       const verdict = k => { const dd = o.af[k] - NEED[k]; return dd < 0 ? `<td class="mk-bad">✖ ${-dd}${GD[k].u} 모자라요</td>` : `<td class="mk-good">✔ ${dd ? `${dd}${GD[k].u} 남아요` : '딱 맞아요'}</td>`; };
-      const step1 = `<div class="mk-step">${head(1, stormy ? '오늘은 폭풍' : '오늘 시장 값')}
+      const step1 = `<div class="mk-step">${head(1, stormy ? '오늘은 폭풍' : scarce ? '오늘 시장 값 · 💸 물고기 품귀' : '오늘 시장 값')}
+        ${scarce ? '<div class="prep dear">💸 <b>물고기 품귀!</b> 곰 마을 물고기가 귀해 오늘 값이 비싸요.</div>' : ''}
         ${stormy ? '<div class="trade storm"><div class="trade-row">⛈️ 폭풍이라 시장이 닫혔어요. 창고와 오늘 만든 것으로만 버텨야 해요.</div></div>'
           : `<div class="rate"><b>${rateTxt(rate)}</b><span class="note">열매 ${b}개를 내면 물고기 ${a}마리를 받아요. 곰 마을 물고기는 오늘 ${BEAR_FISH}마리까지 있어요.</span></div>
           <p class="note">물고기 1마리로 치면 직접 잡기는 열매 ${OC}개 포기, 오늘 시장은 <span class="nw">열매 ${new F(b, a).html()}개</span>예요.</p>`}</div>`;
       const step2 = `<div class="mk-step">${head(2, '앞으로의 날씨와 값')}${weekForecast(cfg, d)}
         ${!next ? '<p class="note">오늘이 마지막 날이에요.</p>'
           : next.storm ? `<div class="prep">⛈️ <b>내일은 폭풍!</b> 시장이 닫혀요. 이대로면 내일 버틸 수 있을까? ${canWeather(o.end) ? '<span class="res-ok">버틸 수 있어요</span>' : '<span class="res-no">모자라요</span>'}</div>`
-          : `<p class="note">내일 시장 값은 <span class="nw">${rateTxt(next.rate)}</span>예요. 오늘 값과 견줘 보세요.</p>`}</div>`;
+          : `<p class="note">${cfg.scarce === d + 1 ? '💸 내일은 물고기 품귀예요. ' : ''}내일 시장 값은 <span class="nw">${rateTxt(next.rate)}</span>예요. 오늘 값과 견줘 보세요.</p>`}</div>`;
       const stop = v.done || stormy ? '' : !max ? `<p class="note mk-stop">열매가 ${have.fruit}개뿐이라 오늘은 바꿀 수 없어요.</p>`
         : v.n >= max ? `<p class="note mk-stop">${fruitMax <= fishMax ? `남은 열매 ${o.af.fruit}개로는 더 바꿀 수 없어요(한 번에 ${b}개).` : `곰 마을 물고기는 오늘 ${BEAR_FISH}마리까지라 더 바꿀 수 없어요.`}</p>` : '';
       const step3 = `<div class="mk-step">${head(3, v.done ? '오늘 먹은 결과' : stormy ? '오늘 먹을 것' : '몇 번 바꿀까?')}
@@ -1985,7 +1998,7 @@ function weekEvening(cfg, st, d, made) {
       const go = sh.querySelector('#db-go');
       if (go) go.onclick = () => {
         const r = calc();
-        st.log.push({ day: d, storm: stormy, rate, made, n: stormy ? 0 : r.n, af: r.af, end: r.end, hungry: r.hungry });
+        st.log.push({ day: d, storm: stormy, scarce, rate, made, n: stormy ? 0 : r.n, af: r.af, end: r.end, hungry: r.hungry });
         st.store = r.end; v.done = true;
         v.said = sayHTML('sys', voice(r));
         sfx(r.hungry ? 'no' : d >= days ? 'win' : 'ok');
@@ -2006,7 +2019,8 @@ function weekEvening(cfg, st, d, made) {
 const MARKET_HINTS = [
   ['gomi', '폭풍 날엔 시장이 닫혀. 토끼 마을 방식으로는 하루에 물고기를 2마리밖에 못 잡으니까, 맑은 날 미리 사서 창고에 모아 둬야 해.'],
   ['sage', '폭풍 날 버티려면 전날 창고에 물고기 2마리가 있으면 된단다. 폭풍 날 물고기 1마리를 잡고 열매 6개를 따면 되지. 물고기 1마리와 열매 5개가 있어도 된단다.'],
-  ['sage', '값이 싼 날 물고기를 넉넉히 사 두렴. 예보에서 폭풍 전 맑은 날의 값을 보고, 값이 비싼 날에는 남는 열매를 창고에 모아 두는 것도 방법이란다.']
+  ['sage', '값이 싼 날 물고기를 넉넉히 사 두렴. 예보에서 폭풍 전 맑은 날의 값을 보고, 값이 비싼 날에는 남는 열매를 창고에 모아 두는 것도 방법이란다.'],
+  ['tori', '물고기 품귀 날처럼 물고기 1마리 값이 열매 6개보다 비싸면, 사는 것보다 직접 잡는 쪽이 덜 아까워. 직접 잡으면 열매 6개만 포기하니까. 품귀 날 전에 미리 사 두는 방법도 있어.']
 ];
 
 /* =========================================================
@@ -2401,22 +2415,29 @@ async function marketQuest() {
   if (!S.f.marketMet) {
     await say('peng2', '교역관님! 폭풍 소식 기억나요? 이번에는 토끼 마을 살림을 이레 동안 맡아 주세요.');
     await say('peng2', `날마다 토끼 마을에서 ${DAY_H}시간 일하고, 시장에서 바꾸고, ${amt('fish', NEED.fish)}와 ${amt('fruit', NEED.fruit)}를 먹어요. 남은 것은 창고에 쌓여요.`);
-    await say('peng2', '이번엔 이레 치 날씨와 시장 값 예보가 있어요. 폭풍은 두 번 오고, 폭풍 날엔 시장이 닫혀요.');
-    await say('peng2', '목표는 이레 동안 한 번도 굶지 않기예요!');
+    await say('peng2', '이번엔 이레 치 날씨와 시장 값 예보가 있어요. 폭풍은 두 번 오고, 폭풍 날엔 시장이 닫혀요. 물고기가 귀해 값이 비싼 품귀 날(💸)도 하루 있어요.');
+    await say('peng2', '목표는 이레 동안 한 번도 굶지 않기예요! 이레가 끝났을 때 창고가 넉넉할수록 더 잘한 거예요.');
     S.f.marketMet = true;
   } else if (await ask('peng2', S.f.marketDone ? '한 번 더 해 볼래요? 날씨와 값은 새로 정해져요.' : '시장 운영을 다시 해 볼래요?', ['좋아요', '다음에요'])) return;
   await say('peng2', '창고는 비어 있어요. 아침마다 토끼 마을에서 일하고, 저녁에 여기 시장으로 와요. 첫날부터 시작해 볼까요?');
   Dlg.close();
   const wk = makeWeek();
-  const st = await weekQuest({ storms: wk.storms, rates: wk.rates, hints: MARKET_HINTS });
+  const st = await weekQuest({ storms: wk.storms, rates: wk.rates, scarce: wk.scarce, hints: MARKET_HINTS });
   await fadeTo(() => warp(24, 19, 'up'));
-  const h = hungerOf(st.log);
-  S.store = st.store; S.market = { best: Math.min(S.market ? S.market.best : h, h), tries: (S.market ? S.market.tries : 0) + 1 };
+  const h = hungerOf(st.log), OC = HR.r.fish / HR.r.fruit;
+  // 남은 창고를 열매로 쳐서 견준다: 물고기 1마리 = 열매 6개(토끼 마을이 직접 잡을 때 포기하는 열매)
+  const val = x => x.fruit + x.fish * OC, rec = { h, fish: st.store.fish, fruit: st.store.fruit }, prev = S.market && S.market.bestStore;
+  const better = !prev || h < prev.h || (h === prev.h && val(rec) > val(prev));
+  const waste = st.log.filter(x => x.scarce && x.n).reduce((t, x) => t + x.rate[1] * x.n - x.rate[0] * x.n * OC, 0);
+  S.store = st.store; S.market = { best: Math.min(S.market ? S.market.best : h, h), tries: (S.market ? S.market.tries : 0) + 1, bestStore: better ? rec : prev };
   const first = !S.f.marketDone; S.f.marketDone = true; save();
   if (first) toast('✅ 선택 활동 완료: 교역섬 시장 운영', 'gold', 3200);
   if (!h) { sfx('win'); await say('peng2', '이레 동안 한 번도 굶지 않았어요! 폭풍도 거뜬히 넘겼네요.'); }
   else await say('peng2', `이레 동안 굶은 날이 ${h}번 있었어요. 값이 쌀 때 물고기를 사 두면 달라질 거예요. 다시 말을 걸면 새 예보로 해 볼 수 있어요.`);
+  await say('peng2', `남은 창고는 ${stockTxt(st.store)}예요. 물고기 1마리를 열매 ${OC}개로 치면 <b>열매 ${val(rec)}개</b>만큼 남았어요.${prev ? (better ? ' 지난 기록보다 넉넉해요!' : ` 지난 가장 좋은 기록은 굶은 날 ${prev.h}번, 열매 ${val(prev)}개만큼이었어요.`) : ''}`);
+  if (waste) await say('peng2', `💸 물고기 품귀 날 물고기를 사느라 직접 잡을 때보다 열매 ${waste}개를 더 썼어요.`);
   await say('sage', '값이 쌀 때 넉넉히 사 두고 폭풍 전에 창고를 채우는 것. 교역의 이익을 지키면서 위험에 대비하는 방법이란다.');
+  await say('sage', `그리고 품귀 날처럼 물고기 1마리 값이 직접 잡을 때 포기하는 열매(${OC}개)보다 비싸면, 바꾸지 않는 게 낫단다. 교환 비율이 두 마을의 기회비용 사이에 있어야 교역이 서로에게 이득이지.`);
 }
 
 /* --- 선택 활동: 여우섬 (물고기에 비교 우위가 있는 마을) --- */
