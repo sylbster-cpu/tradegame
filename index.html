@@ -1043,7 +1043,7 @@ function drawBoat(g, X, Y, t, crew) {
    ========================================================= */
 const DIRS = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
 let P = null;
-const G = { busy: 0, fade: false, toastAt: {}, tap: null, tapPtr: null, cam: { x: 0, y: 0 }, luck: window.__ydLuck || null };   // luck: 점검에서 행운 확률을 고정할 때
+const G = { busy: 0, fade: false, toastAt: {}, tap: null, tapPtr: null, cam: { x: 0, y: 0 }, luck: window.__ydLuck || null, fishFx: null };   // luck: 점검에서 행운 확률을 고정할 때, fishFx: 낚은 물고기가 날아오는 그림
 
 const NPCS = [
   { id: 'sage', who: 'sage', spr: 'turtle', at: () => festivalTime() ? [11, 30] : S.ch >= 3 ? [28, 17] : [12, 25], talk: () => talkSage() },
@@ -1687,29 +1687,125 @@ function workTap(tx, ty) {
   }
   return false;
 }
-/* 낚시: 찌를 던지고, 찌가 가라앉으면 Ⓐ (찌 상자를 눌러도 된다) */
+/* 낚시: 찌를 던지고, 찌가 가라앉으면 Ⓐ (찌 상자를 눌러도 된다).
+   지도에는 낚싯대를 휘둘러 찌를 던지는 모습이 그려진다(drawFishing). 던지기는 입질을 기다리는 동안 끝난다 */
 function startFishing() {
-  const w = G.work; w.fishing = { bite: false };
+  const w = G.work, now = performance.now(), fx = G.fishFx;
+  // 길게 눌러 이어 낚을 때는 앞에서 낚은 물고기가 다 날아온 뒤에 던진다
+  const t0 = fx && !RM ? Math.max(now, fx.t0 + fx.dur) : now, fi = w.fishing = { bite: false, t0, m: rodGeom(P.dir) };
   let f = $('fishing'); if (!f) { f = document.createElement('div'); f.id = 'fishing'; f.className = 'fishing'; f.setAttribute('aria-live', 'assertive'); $('stage').appendChild(f); }
   f.onpointerdown = e => { e.preventDefault(); ac(); fishTap(); aDown(e.pointerId); };
-  // 용돌이를 가리지 않게: 용돌이가 화면 아래쪽에 있으면 그 위에, 가운데나 위쪽이면 그 아래에 띄운다
-  const cam = camNow(), fy = (P.py + TILE / 2 - cam.y) / cam.vh;
-  f.style.top = `${Math.round(clamp(fy > .6 ? fy - .28 : fy + .26, .3, .76) * 100)}%`;
+  // 용돌이와 찌를 가리지 않게: 바다를 아래로 보면 위에, 위로 보면 아래에 띄운다.
+  // 옆으로 보면 용돌이가 화면 아래쪽에 있을 때 그 위에, 가운데나 위쪽이면 그 아래에 띄운다
+  const cam = camNow(), fy = (P.py + TILE / 2 - cam.y) / cam.vh, below = P.dir === 'up' ? fy < .62 : P.dir === 'down' ? fy < .38 : fy <= .6;
+  f.style.top = `${Math.round(clamp(below ? fy + .26 : fy - .28, .3, .76) * 100)}%`;
   f.className = 'fishing'; f.innerHTML = `<div class="bob">🎣</div><b>찌를 던졌어요… 찌가 쑥 가라앉으면 Ⓐ!</b>`;
-  sfx('splash');
-  w.fishing.timer = setTimeout(() => {
-    if (!G.work || !G.work.fishing) return;
-    G.work.fishing.bite = true; f.className = 'fishing bite'; f.innerHTML = `<div class="bob">💦</div><b>지금! Ⓐ</b>`; sfx('sel');
-    G.work.fishing.timer = setTimeout(() => { if (G.work && G.work.fishing) fishTap(true); }, 4000);
-  }, RM ? 300 : 900 + Math.random() * 900);
+  const land = RM ? 0 : t0 - now + FISH_CAST * .9;   // 찌가 물에 닿을 때 첨벙
+  if (land < 20) sfx('splash'); else setTimeout(() => { if (G.work && G.work.fishing === fi) sfx('splash'); }, land);
+  fi.timer = setTimeout(() => {
+    if (!G.work || G.work.fishing !== fi) return;
+    fi.bite = true; fi.tBite = performance.now(); f.className = 'fishing bite'; f.innerHTML = `<div class="bob">💦</div><b>지금! Ⓐ</b>`; sfx('sel');
+    fi.timer = setTimeout(() => { if (G.work && G.work.fishing === fi) fishTap(true); }, 4000);
+  }, RM ? 300 : Math.max(t0 - now + FISH_CAST + 150, 900 + Math.random() * 900));
 }
 function fishTap(auto) {
   const w = G.work, fi = w && w.fishing; if (!fi) return;
   const f = $('fishing');
   if (!fi.bite) { if (f && !AH.on) f.querySelector('b').textContent = '아직이에요. 찌를 지켜보세요!'; return; }
   clearTimeout(fi.timer); w.fishing = null; if (f) f.remove();
-  const n = Math.max(1, howMany(w, 'fish'));
-  spend('fish', n, auto ? ' · 찌가 가라앉아 저절로 낚았어요' : '', luckRoll(n));
+  const n = Math.max(1, howMany(w, 'fish')), got = luckRoll(n), k = Math.min(got, 4);
+  if (!RM) G.fishFx = { t0: performance.now(), m: fi.m, n: k, dur: FISH_REEL + (k - 1) * FISH_GAP };
+  spend('fish', n, auto ? ' · 찌가 가라앉아 저절로 낚았어요' : '', got);
+}
+/* 낚시 그림(코드로 그린다). 낚싯대를 뒤로 젖혔다가 앞으로 휘두르면 찌가 포물선을 그리며 바라보는 쪽 바다에 떨어진다.
+   찌는 물결에 까딱거리다가 입질이 오면 쑥 가라앉고 물이 튄다. 낚으면 낚싯대를 들어 올리고 물고기가 용돌이 쪽으로 날아온다.
+   움직임 줄이기 설정이면 던지는 모습과 날아오는 물고기 없이 낚싯대·줄·찌만 그린다 */
+const FISH_CAST = 520, FISH_REEL = 400, FISH_GAP = 90;
+// h: 낚싯대를 쥔 손(용돌이 그림 기준). 낚싯대 각도(라디안, 0이면 앞으로 눕고 π/2면 곧게 선다): rest 던진 뒤, back 뒤로 젖혔을 때, reel 낚아 올릴 때
+const ROD = { down: { h: [21, 15], rest: .3, back: 1.9, reel: 1.45 }, up: { h: [23, 15], rest: .35, back: 2, reel: 1.2 }, left: { h: [6, 15], rest: .55, back: 1.8, reel: 1.1 }, right: { h: [26, 16], rest: .55, back: 1.8, reel: 1.1 } };
+function rodGeom(dir) {
+  const [dx, dy] = DIRS[dir], r = ROD[dir];
+  return { dx, dy, ...r, hx: P.px + r.h[0], hy: P.py + r.h[1], bx: (P.x + dx) * TILE + 16 + (dy ? 5 : dx * 4), by: (P.y + dy) * TILE + 18 + dy * 2, ex: P.px + 16, ey: P.py - 6 };
+}
+// 위아래를 볼 때는 낚싯대를 몸 오른쪽으로 비스듬히 내밀어 얼굴을 가리지 않게 한다
+function rodTip(m, th) {
+  const L = 26, c = Math.cos(th), s = Math.sin(th);
+  return m.dy ? [m.hx + 9 * c + 6 * s + 6, m.hy + m.dy * c * L * .7 - s * L] : [m.hx + m.dx * c * L, m.hy - s * L];
+}
+// 용돌이 뒤에 그릴지: 바다를 위로 볼 때, 그리고 낚싯대를 머리 뒤로 젖히는 동안
+function fishBehind(now) {
+  const fx = G.fishFx && now < G.fishFx.t0 + G.fishFx.dur ? G.fishFx : null, fi = G.work && G.work.fishing, o = fx || fi;
+  return !!o && (o.m.dy < 0 || (!fx && !RM && now - fi.t0 < FISH_CAST * .42));
+}
+const easeOut = t => 1 - (1 - t) * (1 - t);
+function drawRod(g, m, th) {
+  const [tx, ty] = rodTip(m, th), bx = m.hx - (tx - m.hx) * .2, by = m.hy - (ty - m.hy) * .2;
+  g.lineCap = 'round';
+  g.strokeStyle = '#3E2614'; g.lineWidth = 2.6; g.beginPath(); g.moveTo(bx, by); g.lineTo(m.hx, m.hy); g.stroke();
+  g.strokeStyle = '#8A5A2B'; g.lineWidth = 1.7; g.beginPath(); g.moveTo(m.hx, m.hy); g.lineTo(tx, ty); g.stroke();
+  return [tx, ty];
+}
+function drawLine(g, [ax, ay], x, y, sag) {
+  g.strokeStyle = 'rgba(255,255,255,.9)'; g.lineWidth = .8;
+  g.beginPath(); g.moveTo(ax, ay); g.quadraticCurveTo((ax + x) / 2, (ay + y) / 2 + sag, x, y); g.stroke();
+}
+function drawBobber(g, x, y, sunk) {
+  if (!sunk) { g.fillStyle = '#FFFFFF'; g.beginPath(); g.arc(x, y, 3, 0, Math.PI); g.fill(); }
+  g.fillStyle = '#E5463B'; g.beginPath(); g.arc(x, y, 3, Math.PI, 2 * Math.PI); g.fill();
+  g.fillStyle = '#2B3A33'; g.fillRect(x - .5, y - 5.5, 1, 2.6);
+}
+function ripple(g, x, y, q, big) {
+  const r = (big ? 5 : 3) + q * (big ? 12 : 8);
+  g.strokeStyle = `rgba(255,255,255,${(.65 * (1 - q)).toFixed(2)})`; g.lineWidth = .8;
+  g.beginPath(); g.ellipse(x, y + 1, r, r * .42, 0, 0, 2 * Math.PI); g.stroke();
+}
+function drawFishing(g, now) {
+  g.save();
+  const fx = G.fishFx, fi = G.work && G.work.fishing;
+  if (fx && now >= fx.t0 + fx.dur) G.fishFx = null;
+  if (G.fishFx) {   // 낚아 올리기
+    const m = fx.m, q = (now - fx.t0) / fx.dur, tip = drawRod(g, m, lerp(m.rest, m.reel, easeOut(Math.min(1, q * 2))));
+    if (q < .6) ripple(g, m.bx, m.by, q / .6, true);
+    for (let i = fx.n - 1; i >= 0; i--) {
+      const qi = clamp((now - fx.t0 - i * FISH_GAP) / FISH_REEL, 0, 1), e = easeOut(qi);
+      const x = lerp(m.bx, m.ex, e), y = lerp(m.by, m.ey, e) - Math.sin(Math.PI * qi) * 22;
+      if (i === 0 && qi < .85) drawLine(g, tip, x, y - 2, 0);
+      g.globalAlpha = 1 - Math.max(0, (qi - .8) / .2);
+      g.fillStyle = 'rgba(255,255,255,.4)'; g.beginPath(); g.ellipse(x, y, 9.5, 5, 0, 0, 2 * Math.PI); g.fill();
+      pixDraw(g, 'fish', x - 8, y - 3.5, 1); g.globalAlpha = 1;
+    }
+  } else if (fi) {
+    const m = fi.m, p = RM ? 1 : clamp((now - fi.t0) / FISH_CAST, 0, 1);
+    let th = m.rest;
+    if (p < .35) th = lerp(m.rest, m.back, easeOut(p / .35));          // 뒤로 젖히기
+    else if (p < .55) th = lerp(m.back, m.rest - .15, (p - .35) / .2);  // 앞으로 휘두르기
+    else if (p < 1) th = lerp(m.rest - .15, m.rest, (p - .55) / .45);
+    if (fi.bite && !RM) th = m.rest - .12 + Math.sin(now / 45) * .05;   // 입질: 낚싯대 끝이 떨린다
+    else if (p >= 1 && !RM) th += Math.sin(now / 420) * .03;
+    const tip = drawRod(g, m, th);
+    if (p < .55) { drawLine(g, tip, tip[0], tip[1] + 4, 0); drawBobber(g, tip[0], tip[1] + 7, false); }   // 찌가 낚싯대 끝에 매달려 있다
+    else if (p < 1) {   // 찌가 포물선을 그리며 날아간다
+      const q = (p - .55) / .45, x = lerp(tip[0], m.bx, q), y = lerp(tip[1] + 7, m.by, q) - Math.sin(Math.PI * q) * 16;
+      drawLine(g, tip, x, y - 3, 4 * q); drawBobber(g, x, y, false);
+    } else if (fi.bite) {   // 쑥 가라앉고 물이 튄다
+      const q = RM ? 1 : (now - fi.tBite) / 500, jx = RM ? 0 : Math.sin(now / 37) * .8;
+      drawLine(g, tip, m.bx + jx, m.by + 2, 0);
+      ripple(g, m.bx, m.by, RM ? .3 : (now - fi.tBite) / 700 % 1, true);
+      if (!RM) ripple(g, m.bx, m.by, ((now - fi.tBite) / 700 + .5) % 1, true);
+      drawBobber(g, m.bx + jx, m.by + 3, true);
+      if (q < 1) for (let i = 0; i < 6; i++) {
+        const a = -Math.PI / 2 + (i - 2.5) * .38, d = 15 * q;
+        g.fillStyle = `rgba(255,255,255,${(1 - q).toFixed(2)})`; g.fillRect(m.bx + Math.cos(a) * d - .8, m.by + Math.sin(a) * d + 18 * q * q - .8, 1.6, 1.6);
+      }
+    } else {   // 물결에 까딱거린다
+      const by = m.by + (RM ? 0 : Math.sin(now / 260) * 1.2);
+      drawLine(g, tip, m.bx, by - 3, 5);
+      ripple(g, m.bx, m.by, RM ? .4 : (now - fi.t0) / 1400 % 1, false);
+      if (!RM) ripple(g, m.bx, m.by, ((now - fi.t0) / 1400 + .5) % 1, false);
+      drawBobber(g, m.bx, by, false);
+    }
+  }
+  g.restore();
 }
 /* Ⓐ 길게 누르기: 누르고 있는 동안 같은 일을 이어서 한다(나무는 다 딸 때까지, 낚시는 찌가 가라앉으면 바로 낚고 다시 던진다).
    ptr: 화면을 눌러 시작했으면 그 손가락(포인터) 번호. 그 손가락을 뗄 때만 멈춘다(키보드는 null)
@@ -2881,6 +2977,8 @@ function render(now) {
       items.push({ y: fy + 31, d: () => drawMon(ctx, PARTY_SPR[id], fx, fy, PARTY_KID[id] ? .82 : .9, P.moving ? Math.abs(Math.sin(now / 90 + i)) * 2 : (Math.sin(now / 320 + i) + 1)) });
     });
     items.push({ y: P.py + 32.5, d: () => drawYD(ctx, P.px, P.py, P.dir, P.moving, now) });
+    // 낚싯대와 찌
+    if ((G.work && G.work.fishing) || G.fishFx) items.push({ y: P.py + (fishBehind(now) ? 32 : 33), d: () => drawFishing(ctx, now) });
   } else items.push({ y: P.py + 32.5, d: () => drawBoat(ctx, P.px, P.py, now, S.party.map(id => PARTY_SPR[id])) });
   items.sort((a, b) => a.y - b.y).forEach(it => it.d());
   // 안개
@@ -2970,6 +3068,7 @@ function showTitle() {
 }
 function startGame(state) {
   if (G.work) { if (G.work.fishing) clearTimeout(G.work.fishing.timer); restoreTrees(G.work); G.work = null; AH.on = false; workBar(); }
+  G.fishFx = null;
   // 이야기 도중(대사·판)에 처음 화면이나 장 선택으로 나왔으면 그 이야기는 버린다. busy가 남으면 움직일 수 없다
   G.busy = 0; Dlg.close(); while (modals.length) closeModal(); hideCard(); held.clear(); heldOrder = [];
   S = state; TITLE_ON = false;
