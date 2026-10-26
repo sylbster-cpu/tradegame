@@ -513,6 +513,11 @@ td.win{background:var(--okbg);color:var(--ok);font-weight:700}
 /* 가로로 눕힌 휴대폰: 오른쪽 위는 단원 단추 자리라 소리 단추를 왼쪽 위(그림 쪽 빈자리)로 */
 @media (orientation:landscape) and (max-height:560px){.title .t-snd{right:auto;left:calc(10px + env(safe-area-inset-left,0px))}}
 @media (max-width:420px),(max-height:420px){.title .t-snd{min-width:44px;padding:6px 8px}.title .t-snd-tx{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}}
+/* 누르는 것은 모두 44px 이상(교사 결정 2026-10-26): 머리 줄 단추, 창 닫기 ✕, 작은 단추, 대화 선택지, 장 선택 탭 */
+.hud-btns button{min-height:44px;min-width:44px;justify-content:center}
+.x{width:44px;height:44px}
+.sheet h2{padding-right:52px}
+.btn,.dlg-ch button,.utabs button{min-height:44px}
 
 </style>
 </head>
