@@ -1464,6 +1464,21 @@ function goalPos() {
   if (g.npc) { const n = NPCS.find(x => x.id === g.npc); if (n && npcShown(n)) return [n.x, n.y]; }
   return g.at || null;
 }
+/* 목표 표시할 곳들: [x, y, 느낌표를 띄울지]. 화면 안의 목표마다 느낌표를 띄우고, 하나도 안 보일 때만 가장 가까운 목표로 가장자리 화살표를 띄운다.
+   ② 단원은 예전처럼 목표 하나(인물이면 느낌표). ① 단원은 고를 곳이 여럿이면 모두(1장 아침 둘, 2장 오후 자리 셋),
+   짧은 일 중에는 일할 곳(바로 옆에 서 있으면 느낌표는 숨김), 아침 일손 중에는 열매가 남은 나무(화살표만) */
+function goalTargets() {
+  if (UNIT === 'choice') {
+    const at = id => { const o = OBJS.find(x => x.id === id && objShown(x)); if (o) return { x: o.x + (o.w >> 1), y: o.y, r: [o.x, o.y, o.w, o.h] }; const n = NPCS.find(x => x.id === id && npcShown(x)); return n ? { x: n.x, y: n.y, r: [n.x, n.y, 1, 1] } : null; };
+    const beside = ([x, y, w, h]) => P.x >= x - 1 && P.x <= x + w && P.y >= y - 1 && P.y <= y + h;
+    const list = (ids, bang) => ids.map(at).filter(Boolean).map(t => [t.x, t.y, bang(t)]);
+    if (G.work) return WORK_PLACES.rabbit.trees.filter(([x, y]) => tAt(x, y) === T.FRUIT).map(([x, y]) => [x, y, false]);
+    if (G.job) return list(G.job.at, t => !beside(t.r));
+    if (S.ch === 1) return list(['c_carp', 'c_work'], () => true);
+    if (S.ch === 2 && S.f.c2) return list(['c_boothA', 'c_boothB', 'c_stage'], () => true);
+  }
+  const gp = goalPos(); return gp ? [[gp[0], gp[1], !!goal().npc]] : [];
+}
 function updateHUD() {
   $('hud-ch').textContent = chName(UNIT, S.ch);
   const wallet = UNIT === 'choice' ? `<span class="wallet nw">🐚 ${S.shell}</span>` : '';
@@ -1693,9 +1708,9 @@ function workBar() {
   b.innerHTML = `<span class="wb-clock">⏰ <b>${left}</b>시간 남음</span><span class="nw">🎒 ${IC.fish}${w.bag.fish} ${IC.fruit}${w.bag.fruit}</span>
     ${n ? (r => `<span class="nw${hasLuck(w) && w.raise ? ' luck' : ''}">📜 ${IC.fish}${w.bag.fish}/${r.fish} ${IC.fruit}${w.bag.fruit}/${r.fruit}${hasLuck(w) && w.raise ? ' 🎊' : ''}</span>`)(w.raise ? raised(n, w) : n) : ''}
     ${w.info || ''}${w.per > 1 ? `<span class="nw wb-x2">✋ ${IC[w.short]} ${w.per}${GD[w.short].u}씩</span>` : ''}
-    <button type="button" id="wb-end">🌙 일 마치기</button>${w.msg ? `<span class="wb-msg" aria-live="polite">${w.msg}</span>` : ''}`;
+    ${w.noEnd ? '' : '<button type="button" id="wb-end">🌙 일 마치기</button>'}${w.msg ? `<span class="wb-msg" aria-live="polite">${w.msg}</span>` : ''}`;
   $('toasts').style.top = `${b.offsetTop + b.offsetHeight + 6}px`;   // 알림이 작업 막대에 가리지 않게 그 아래에 띄운다
-  $('wb-end').onclick = () => { sfx('sel'); if (!G.work || G.work.fishing) return; if (left && !confirm(`남은 ${left}시간을 쓰지 않고 오늘 일을 마칠까요?`)) return; endWork(); };
+  const eb = $('wb-end'); if (eb) eb.onclick = () => { sfx('sel'); if (!G.work || G.work.fishing) return; if (left && !confirm(`남은 ${left}시간을 쓰지 않고 오늘 일을 마칠까요?`)) return; endWork(); };
 }
 function workSay(msg, snd) { if (!G.work) return; G.work.msg = msg; if (snd) sfx(snd); workBar(); }
 function endWork() { if (!G.work) return; toast(G.work.endMsg || '🌙 해가 졌어요.', 'gold', 2200); G.work.finish(); }
@@ -2862,6 +2877,8 @@ function cCalc(alts) {
 }
 const shellTxt = n => `<span class="nw">🐚 ${n}</span>`;
 const sgn = n => n > 0 ? `+${n}` : n < 0 ? `−${-n}` : '0';
+/* 장면 처음의 조개를 기억해 두고, 그 장면을 다시 하면(도중에 껐다 다시 열었을 때) 그때로 되돌린다. 재료·간판·표를 두 번 사지 않게 */
+function shellBase() { const k = 'shell' + S.ch; if (S.f[k] == null) S.f[k] = S.shell; else S.shell = S.f[k]; updateHUD(); }
 function addShell(n, why) { S.shell += n; updateHUD(); if (why) toast(`${why} <b class="nw">🐚 ${sgn(n)}</b>`, n < 0 ? '' : 'gold', 2400); sfx(n < 0 ? 'page' : 'coin'); }
 const spotCols = () => ['A', 'B', 'C'].map(k => ({ id: k, h: `${C_SPOTS[k].ic} ${C_SPOTS[k].nm}`, ben: C_SPOTS[k].ben, cost: C_SPOTS[k].cost, me: S.my.spot === k }));
 /* 비교표: cols = [{ id, h(머리글), ben, cost, me }]. 계산 줄(암묵적 비용·기회비용·순편익)은 show(id)일 때만 채운다. sunk: 이미 낸 돈 줄 */
@@ -3047,7 +3064,8 @@ async function cMorningOffer(kind) {
     await say('rab', '아침 한나절 과수원 일손을 구해요. 열매 3개를 따 주면 품삯으로 조개 3개를 드려요.');
     if (await ask('yd', '과수원 일손을 도울까?', ['일손을 돕는다', '다른 곳도 둘러본다'])) return;
     await say('rab', '서쪽 과수원의 열매나무 앞에서 Ⓐ를 누르면 열매를 따요. 3시간이면 3개!');
-    await workDay({ cost: HR.r, hours: 3, need: null, info: '<span class="nw">🍎 열매 3개 따기</span>', endMsg: '☀️ 아침 일을 마쳤어요.' });
+    shellBase();
+    await workDay({ cost: HR.r, hours: 3, need: null, noEnd: true, info: '<span class="nw">🍎 열매 3개 따기</span>', endMsg: '☀️ 아침 일을 마쳤어요.' });   // 품삯은 다 따야 받으므로 '일 마치기'를 두지 않는다
     await say('rab', '고마워요! 품삯 조개 3개예요.');
     addShell(3, '💰 품삯');
   }
@@ -3083,7 +3101,7 @@ async function cSpot(o) {
 }
 async function cDoSpot(key) {
   const sp = C_SPOTS[key];
-  S.my.spot = key; save();
+  shellBase(); S.my.spot = key; save();
   if (sp.cost) { await say('sys', `${jo(sp.buy, '을', '를')} 샀어요. 🧾 영수증: 조개 ${sp.cost}개`); addShell(-sp.cost, `🧾 ${sp.buy}`); }
   else await say('band', '고마워요! 무대 상자 6개를 날라 주세요. 무대 앞에서 Ⓐ를 누르면 돼요.');
   if (key !== 'C') await say('tori', `손님이 오면 ${sp.nm} 앞에서 Ⓐ를 눌러! 여섯 번이야.`);
@@ -3168,6 +3186,7 @@ function cMirrorBoard(my) {
 
 /* ---------- 4장 저녁: 이름 간판 (매몰 비용) ---------- */
 async function cEvening() {
+  shellBase();
   await say('rchief', '저녁 장터에서는 광장 남쪽의 등불 부스를 맡아 주렴. 다람쥐 목수가 네 이름을 새긴 간판을 만들어 준다는구나.');
   await say('carp', `‘용돌이 등불’ 간판, 조개 ${C_SIGN}개예요. 이름을 새겨서 돌려받을 수도, 남에게 팔 수도 없어요.`);
   addShell(-C_SIGN, '🧾 이름 간판'); S.f.sign = true; save();
@@ -3227,7 +3246,7 @@ function cSunkBoard(mine) {
 
 /* ---------- 5장 밤: 마지막 한 시간 (편익은 사람마다, 종합 적용) ---------- */
 async function cNight() {
-  const N = C_NIGHT;
+  const N = C_NIGHT; shellBase();
   await say('band', `오늘 마지막 공연이에요! 표는 조개 ${N.show.cost}개.`);
   await say('rchief', `창고 정리를 한 시간 도와주면 조개 ${N.barn.ben}개를 주마.`);
   await say('yd', `(이 공연은 조개 ${N.show.ben}개를 내고라도 보고 싶을 만큼 좋아.)`);
@@ -3338,7 +3357,7 @@ async function cExam() {
 
 /* ---------- 선택 활동: 장터가 끝난 바닷가 (합리적 선택의 한계·시장 실패·부정적 외부 효과) ---------- */
 async function cBeach() {
-  const B = C_BEACH;
+  const B = C_BEACH; shellBase();
   await say('rchief', `장터가 끝났구나. 부스마다 쓰레기를 치워 주게. 일꾼을 부르면 품삯이 조개 ${B.clean}개란다.`);
   S.f.trash = true; save();
   await say('seller', `치우는 데 조개 ${B.clean}개? 그냥 두고 가면 ${B.clean}개가 남잖아.`);
@@ -3684,11 +3703,12 @@ function render(now) {
   // 안개
   drawFog(now, x0, y0, x1, y1);
   // 목표 표시
-  const gp = goalPos(); const g = goal();
-  if (gp && g.npc) { const bx = gp[0] * TILE + 16, by = gp[1] * TILE - 4 + Math.sin(now / 220) * 3; drawBang(ctx, bx, by); }
+  const tg = goalTargets();
+  tg.forEach(([x, y, bang]) => { if (bang) drawBang(ctx, x * TILE + 16, y * TILE - 4 + Math.sin(now / 220) * 3); });
   if (G.tap && now - G.tap.t < 600) { ctx.globalAlpha = 1 - (now - G.tap.t) / 600; ctx.strokeStyle = '#FFF7B0'; ctx.lineWidth = 2; ctx.strokeRect(G.tap.x * TILE + 3, G.tap.y * TILE + 3, 26, 26); ctx.globalAlpha = 1; }
   ctx.restore();
-  if (gp) drawEdgeArrow(gp, cx, cy, vw, vh, now);
+  const onScr = ([x, y]) => { const sx = x * TILE + 16 - cx, sy = y * TILE + 16 - cy; return sx > 0 && sx < vw && sy > 0 && sy < vh; };
+  if (tg.length && !tg.some(onScr)) drawEdgeArrow(tg.reduce((a, b) => Math.abs(a[0] - P.x) + Math.abs(a[1] - P.y) <= Math.abs(b[0] - P.x) + Math.abs(b[1] - P.y) ? a : b), cx, cy, vw, vh, now);
 }
 function drawTradeShip(now, a, b, off) {
   const p = (Math.sin(now / 4200 + off) + 1) / 2, X = lerp(a[0], b[0], p) * TILE, Y = lerp(a[1], b[1], p) * TILE + Math.sin(now / 300) * 1.5;
@@ -3786,7 +3806,7 @@ function startGame(state) {
 
 /* 점검용 도구 (브라우저 콘솔: __yd.check()) */
 window.__yd = {
-  state: () => S, player: () => P, unit: () => UNIT, job: () => G.job && { k: G.job.k, n: G.job.n, at: G.job.at.slice() },
+  state: () => S, player: () => P, unit: () => UNIT, targets: () => goalTargets(), job: () => G.job && { k: G.job.k, n: G.job.n, at: G.job.at.slice() },
   tp(x, y, dir = 'down', mode = 'land') { P.x = x; P.y = y; P.px = x * TILE; P.py = y * TILE; P.dir = dir; P.mode = mode; P.moving = false; resetTrail(); P.island = islandAt(x, y); },
   exam: () => G.exam, cam: () => ({ ...G.cam, VW, VH }),
   /* 무작위 값 고정: setRate(RATES 번호 또는 null), setWeek({ storms, rates } 또는 null) */
