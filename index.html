@@ -466,7 +466,9 @@ td.win{background:var(--okbg);color:var(--ok);font-weight:700}
 .f-acct p,.f-cert p,.f-way p{margin:4px 0;font-size:.95rem}
 .f-acct-h,.f-cert-h{font-family:"Jua",sans-serif;font-size:1.05rem}
 .f-cert{border-style:double;border-width:4px;border-color:#B47C46;background:#FFF8E6;color:#2B2208}
-.f-cert.on{border-color:var(--ok)}
+/* 증서는 어두운 화면에서도 종이색이고 글자색이 고정이다. 산 뒤 배경도 고정한다(어두운 초록이면 글자가 안 보였다) */
+.f-cert.on{border-color:var(--ok);background:#DDF3E7}
+.f-cert .ok-t{color:#1F8A55}
 .card-ov .f-certs{grid-template-columns:1fr 1fr}
 .card-ov .f-cert p{font-size:.85rem}
 .ok-t{color:var(--ok);font-family:"Jua",sans-serif}
@@ -1465,6 +1467,7 @@ function portraitHTML(p) {
 const Dlg = {
   active: false, mode: '', resolve: null, timer: null, full: '', toks: null, n: 0,
   show(who) {
+    ghostMark();
     const w = WHO[who] || WHO.sys;
     $('dlg-nm').textContent = w.n; $('dlg-por').innerHTML = portraitHTML(w.p);
     $('dlg').hidden = false; this.active = true; held.clear(); refit();
@@ -1501,6 +1504,7 @@ const Dlg = {
         box.innerHTML = (order || opts.map((_, i) => i)).map((i, k) => `<button type="button" data-i="${i}" class="${wrong.includes(i) ? 'wrong' : ''}"><span class="k">${k + 1}</span><span>${opts[i]}</span></button>`).join('');
         box.querySelectorAll('button').forEach(b => b.onclick = e => { e.stopPropagation(); sfx('sel'); this.pick = null; box.innerHTML = ''; $('dlg').classList.remove('choosing'); res(+b.dataset.i); });
         this.pick = k => { const b = box.querySelectorAll('button')[k]; if (b) b.click(); };
+        ghostMark();
         refit();
         const first = box.querySelector('button:not(.wrong)') || box.querySelector('button'); if (first) try { first.focus({ preventScroll: true }); } catch (e) { first.focus(); }
       });
@@ -1511,7 +1515,7 @@ const Dlg = {
     if (this.timer) { this.finish(); return; }
     if (this.mode === 'say' && this.resolve) { const r = this.resolve; this.resolve = null; sfx('sel'); r(); }
   },
-  close() { this.stop(); $('dlg').hidden = true; $('dlg').classList.remove('typing', 'choosing'); this.active = false; this.mode = ''; this.pick = null; }
+  close() { ghostMark(); this.stop(); $('dlg').hidden = true; $('dlg').classList.remove('typing', 'choosing'); this.active = false; this.mode = ''; this.pick = null; }
 };
 $('dlg').addEventListener('click', () => { if (Dlg.mode === 'say') Dlg.advance(); else if (Dlg.timer) Dlg.finish(); });
 
@@ -1559,14 +1563,27 @@ const modals = [];
 function openModal(closable = true) {
   const m = document.createElement('div'); m.className = 'modal';
   const sh = document.createElement('div'); sh.className = 'sheet'; sh.setAttribute('role', 'dialog'); sh.setAttribute('aria-modal', 'true'); sh.tabIndex = -1;
-  m.appendChild(sh); document.body.appendChild(m); modals.push({ m, sh, closable }); held.clear();
+  m.appendChild(sh); document.body.appendChild(m); modals.push({ m, sh, closable }); held.clear(); ghostMark();
   if (closable) m.addEventListener('pointerdown', e => { if (e.target === m) closeModal(); });
   setTimeout(() => { try { sh.focus({ preventScroll: true }); } catch (e) { sh.focus(); } }, 30);
   return sh;
 }
-function closeModal() { const t = modals.pop(); if (t) { t.m.remove(); if (t.onClose) t.onClose(); } }
+function closeModal() { ghostMark(); const t = modals.pop(); if (t) { t.m.remove(); if (t.onClose) t.onClose(); } }
 const xBtn = '<button type="button" class="x" data-close aria-label="닫기">✕</button>';
 function bindClose(sh) { sh.querySelectorAll('[data-close]').forEach(b => b.onclick = () => { sfx('sel'); closeModal(); }); }
+/* 판을 다시 그리면 누른 단추가 새 단추로 바뀌어 초점이 판 밖으로 빠진다. 키보드로는 칸 하나를 누를 때마다 Tab을 처음부터 다시 눌러야 했다(2026-10-26 다시 점검).
+   판 안의 단추를 누르면 그 단추의 이름(id나 data-)을 적어 두고, 다시 그린 뒤 초점이 빠졌으면 같은 이름의 단추로, 없거나 막혔으면 판으로 돌려준다 */
+document.addEventListener('click', e => {
+  const t = modals[modals.length - 1], a = e.target.closest && e.target.closest('button');
+  if (!t || !a || !t.sh.contains(a)) return;
+  const sel = a.id ? '#' + CSS.escape(a.id) : [...a.attributes].filter(x => x.name.startsWith('data-')).map(x => `[${x.name}="${CSS.escape(x.value)}"]`).join('');
+  setTimeout(() => {
+    const now = document.activeElement;
+    if (modals[modals.length - 1] !== t || (now && now !== document.body)) return;
+    const b = sel && t.sh.querySelector(sel);
+    try { (b && !b.disabled ? b : t.sh).focus({ preventScroll: true }); } catch (_) { /* 무시 */ }
+  }, 0);
+}, true);   // 단추의 onclick이 판을 다시 그리기 전에 이름을 적어야 하므로 잡기 단계에서
 
 const CH_NAME = ['프롤로그', '1장 · 모자란 하루', '2장 · 곰 마을', '3장 · 교역섬 시장', '본편 완료'];
 const CCH_NAME = ['프롤로그', '1장 · 아침', '2장 · 오후 자리', '3장 · 거울 연못', '4장 · 이름 간판', '5장 · 마지막 한 시간', '시험지 연습', '본편 완료'];
@@ -4396,6 +4413,14 @@ document.addEventListener('keyup', e => { const d = KEYMAP[e.code]; if (d) relea
 window.addEventListener('blur', () => { held.clear(); heldOrder = []; aUp(); AH.block = false; padPtr.clear(); padShow(); });
 /* 화면 방향키: 네 버튼을 하나의 판으로 다룬다. 손가락이 판 가운데에서 어느 쪽에 있는지로 방향을 정하므로,
    누른 채 다른 방향 버튼으로 손가락을 밀면 바로 방향이 바뀐다(판 밖으로 나가도 이어진다). 손가락마다 따로 센다 */
+/* 고스트 클릭 막기(2026-10-26 다시 점검에서 찾음): Ⓐ·방향키·지도·판 바깥을 누르는 순간(pointerdown) 대화창·선택지·판이 열리거나 닫히면,
+   같은 터치가 끝날 때 오는 click이 손가락 아래 새로 생긴 것(대화창, 단추)에 떨어진다. 동작 줄이기 설정이면 첫 대사가 그대로 넘어갔다.
+   누르기마다 번호를 매기고, 그 누르기 동안 화면이 바뀌었으면 그 누르기의 click은 버린다. 키보드로 낸 click과 스크립트 click은 그대로 */
+const GH = { down: 0, open: -1 };
+function ghostMark() { GH.open = GH.down; }
+window.addEventListener('pointerdown', () => { GH.down++; }, true);
+const fromPointer = e => e.pointerType ? true : e.detail > 0;   // 크롬은 click에 pointerType(touch·mouse, 키보드면 '')을 싣는다. 없는 브라우저는 detail로 가린다
+window.addEventListener('click', e => { if (e.isTrusted && fromPointer(e) && GH.open === GH.down) { e.stopPropagation(); e.preventDefault(); } }, true);
 const DPAD = document.querySelector('.dpad'), padPtr = new Map();
 function padDir(e) {
   const r = DPAD.getBoundingClientRect(), dx = e.clientX - (r.left + r.width / 2), dy = e.clientY - (r.top + r.height / 2);
