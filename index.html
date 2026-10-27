@@ -2155,8 +2155,8 @@ function mirrorBoard() {
       <img class="mr-yd" src="${PORT.yd}" alt=""><div class="mr-act">${act}</div><div class="mr-got"><small>얻은 것</small>${got}</div></div>`;
     const Q = () => st.step === 1
       ? (st.pick === 'fish'
-        ? { q: `물고기 1마리를 얻으려고 포기한 것, 곧 물고기 1마리의 기회비용은?`, o: [`열매 ${n}개`, '물고기 1마리', '아무것도 없다'], a: 0, fb: { 1: '물고기 1마리는 네가 얻은 거야. 거울 속 내가 가진 것을 봐.', 2: '6시간을 낚시에 쓰느라 못 한 일이 있지. 거울 속을 봐.' } }
-        : { q: `열매 ${n}개를 얻으려고 포기한 것, 곧 열매 ${n}개의 기회비용은?`, o: ['물고기 1마리', `열매 ${n}개`, '아무것도 없다'], a: 0, fb: { 1: `열매 ${n}개는 네가 얻은 거야. 거울 속 내가 가진 것을 봐.`, 2: '6시간을 열매 따기에 쓰느라 못 한 일이 있지. 거울 속을 봐.' } })
+        ? { q: `물고기 1마리를 얻으려고 포기한 것, 곧 물고기 1마리의 기회비용은?`, o: [`열매 ${n}개`, '물고기 1마리', '아무것도 없다'], a: 0, fb: { 1: '물고기 1마리는 네가 얻은 거야. 거울 속 네가 가진 것을 봐.', 2: '6시간을 낚시에 쓰느라 못 한 일이 있지. 거울 속을 봐.' } }
+        : { q: `열매 ${n}개를 얻으려고 포기한 것, 곧 열매 ${n}개의 기회비용은?`, o: ['물고기 1마리', `열매 ${n}개`, '아무것도 없다'], a: 0, fb: { 1: `열매 ${n}개는 네가 얻은 거야. 거울 속 네가 가진 것을 봐.`, 2: '6시간을 열매 따기에 쓰느라 못 한 일이 있지. 거울 속을 봐.' } })
       : { q: '열매 1개를 얻으려고 포기한 것, 곧 열매 1개의 기회비용은?', o: [`물고기 ${fr(1, n)}마리`, `물고기 ${n}마리`, '열매 1개'], a: 0, fb: { 1: `물고기 ${n}마리를 잡으려면 ${n * H.fish}시간이 들어. 거울 속 용돌이는 1시간만 낚시했어.`, 2: '열매 1개는 네가 얻은 거야. 거울 속을 봐.' } };
     const render = () => {
       let body;
@@ -2520,7 +2520,7 @@ const BOARD_TWINS = () => ({
     if (!fresh) t = '아까 해 본 방법이야. ' + t;
     const n = st.tries.filter(x => x.key !== '1,1').length;
     if (n >= 3) return { who: 'henchief', text: t + '<br>…아무리 바꿔도 물고기 1마리가 늘면 열매 2개가 줄어드는구먼!', done: true };
-    return { who: 'henchief', text: t + `<br><span class="note">다른 방법도 해 보세요. (${n}/3)</span>` };
+    return { who: 'henchief', text: t + `<br><span class="note">다른 방법도 해 보게. (${n}/3)</span>` };
   }
 });
 
@@ -2615,7 +2615,7 @@ function examBoard(plan = EXAM_PLAN, mini = false, gen = genExam) {
       if (st.k >= qs.length) {
         const sc = st.res.filter(Boolean).length;
         sh.innerHTML = `<h2>${mini ? '📝 시험지 연습 결과' : '🦁 심사 결과'}</h2><div class="dots">${dots}</div><p class="j" style="font-size:1.6rem;margin:12px 0">${qs.length}장 중 ${sc}장을 바르게 판정했어요.</p>
-          <p>${mini ? '틀린 장은 수첩의 시험지 읽는 법을 다시 보세요.' : sc >= EXAM_PASS ? `수석 교역관 기준(${EXAM_PASS}장)을 넘었어요!` : `${EXAM_PASS}장 이상이면 통과예요. 수첩을 보고 다시 도전해요.`}</p>
+          <p>${mini ? '틀린 장은 수첩의 시험지 읽는 법을 다시 보세요.' : sc >= EXAM_PASS ? `수석 교역관 기준(${EXAM_PASS}장)을 채웠어요!` : `${EXAM_PASS}장 이상이면 통과예요. 수첩을 보고 다시 도전해요.`}</p>
           <div class="row"><button type="button" class="btn" id="ex-done">확인</button></div>`;
         sh.querySelector('#ex-done').onclick = () => { sfx('sel'); closeModal(); resolve({ score: sc }); };
         return;
@@ -2665,7 +2665,7 @@ async function ch1() {
   const need = raised(NEED, bag), lucky = hasLuck(bag);   // 덤 없이는 하루에 물고기를 2마리까지만 잡으므로 늘어난 주문도 늘 모자라다
   await say('rchief', `해가 졌구나. 물고기 ${bag.fish}마리, 열매 ${bag.fruit}개라… ${lucky ? `행운 소문에 손님이 늘어 주문이 ${amt('fish', need.fish)}와 ${amt('fruit', need.fruit)}로 늘었지. ` : ''}${shortTxt(bag, need)}가 모자라.`);
   await say('rchief', `${lucky ? '늘어난 손님 몫을 빼고 원래 주문만 봐도, ' : ''}주문서를 다 채우려면 물고기 3마리에 18시간, 열매 5개에 5시간, 모두 23시간이 필요하단다. 하루는 12시간뿐이니 어떻게 일해도 모자라. 우리 마을 혼자서는 안 되겠구나.`);
-  await say('rchief', '곰 마을에 가기 전에 하나만 보고 가렴. 물고기를 잡을지 열매를 딸지 고르는 순간, 다른 하나는 포기하게 된단다. 마을 뒤 거울 연못에 비춰 보면 알 수 있지.');
+  await say('rchief', '다른 길을 찾기 전에 하나만 보고 가렴. 물고기를 잡을지 열매를 딸지 고르는 순간, 다른 하나는 포기하게 된단다. 마을 뒤 거울 연못에 비춰 보면 알 수 있지.');
   Dlg.close();
   await mirrorBoard();
   await say('sys', '무언가를 고를 때 포기한 것, 곧 거울 속 내가 가진 것이 <b>기회비용</b>이에요. 토끼 마을에서 물고기 1마리의 기회비용은 열매 6개예요.');
@@ -2685,9 +2685,9 @@ async function sceneBearArrive() {
   S.f.bearArrived = true;
 }
 async function ch2() {
-  await say('bchief', '겨울을 나려면 열매가 넉넉해야 하는데, 우리 마을은 열매 따기가 영 서툴러.');
+  await say('bchief', '겨울을 나려면 열매가 넉넉해야 하는데, 우리 마을은 열매 따기가 영 서투르다오.');
   showCard(`<h3>🐰 토끼 마을과 🐻 곰 마을 비교</h3>${timeTable(false, false)}`);
-  await say('bchief', `우리 마을 일꾼은 물고기 1마리를 잡는 데 ${HR.b.fish}시간, 열매 1개를 따는 데 ${HR.b.fruit}시간이나 걸리지.`);
+  await say('bchief', `우리 마을 일꾼은 물고기 1마리를 잡는 데 ${HR.b.fish}시간, 열매 1개를 따는 데 ${HR.b.fruit}시간이나 걸린다오.`);
   await quiz('tori', '물건 1개를 더 짧은 시간에 만드는 마을은?', ['물고기도 열매도 토끼 마을', '물고기도 열매도 곰 마을', '물고기는 곰 마을, 열매는 토끼 마을'], 0,
     { 1: '곰 마을은 물고기 12시간, 열매 24시간이야. 토끼 마을은 6시간, 1시간.', 2: '물고기도 토끼 마을이 6시간으로 곰 마을 12시간보다 빨라.' });
   await say('sys', '같은 물건을 더 적은 시간에, 곧 같은 시간에 더 많이 만드는 쪽이 <b>절대 우위</b>예요. 토끼 마을은 물고기와 열매 모두 절대 우위예요.');
@@ -2716,7 +2716,7 @@ async function ch3() {
   await say('sage', '왔구나, 용돌이. 오늘 교역섬에 처음으로 시장이 열렸단다. 곰 마을은 물고기를 가져와 열매와 바꾸려 하지.');
   await say('rchief', '박사님, 잔치 날이 다가오는데 교역관 혼자서는 물고기를 다 못 잡았소.');
   await say('sage', `용돌이, 토끼 마을에서 하루 ${DAY_H}시간 일하고, 만든 것을 저녁에 이 시장에서 바꿔 잔치 준비를 마쳐 보렴. 아침이 되면 토끼 마을로 데려다주마.`);
-  await say('sage', '시장 값(교환 비율)은 날마다 달라서, 일을 마치고 와 봐야 안단다.');
+  await say('sage', '시장 값은 날마다 달라서, 일을 마치고 와 봐야 안단다.');
   Dlg.close();
   const tries = [], H = { list: C3_HINTS, i: 0, fails: 0, auto: 2 };
   let win = null;
@@ -2744,7 +2744,7 @@ async function ch3() {
   const [a, b] = win.rate;
   S.deal = { a, b, n: win.n }; S.stats.c3 = tries.length; save();
   await say('rchief', '이럴 수가! 잔치에 쓸 물고기도 열매도 다 마련했어!');
-  await say('sage', `용돌이가 물고기를 직접 잡았다면 1마리에 열매 6개를 포기해야 했지. 시장에서는 열매 <span class="nw">${new F(b, a).html()}개</span>를 내면 물고기 1마리를 얻었단다.`);
+  await say('sage', `네가 물고기를 직접 잡았다면 1마리에 열매 6개를 포기해야 했지. 시장에서는 열매 <span class="nw">${new F(b, a).html()}개</span>를 내면 물고기 1마리를 얻었단다.`);
   showCard(`<h3>두 마을의 기회비용</h3>${PRODLINE}${ocTable(false)}`);
   await quiz('sage', '표를 보렴. 물고기 1마리를 얻을 때 덜 아까운 마을은?', ['곰 마을', '토끼 마을', '똑같다'], 0,
     { 1: `토끼 마을은 물고기 1마리에 열매 6개를 포기해. 곰 마을은 <span class="nw">${fr(1, 2)}개</span>야.`, 2: `토끼 마을은 열매 6개, 곰 마을은 <span class="nw">${fr(1, 2)}개</span>야.` });
@@ -2770,7 +2770,7 @@ async function ch3() {
   await gainPage('ratio');
   hideCard();
   await say('peng2', '교역관님, 큰일이에요! 다음 주에 큰 폭풍이 온대요. 폭풍이 오면 배가 못 떠서 시장도 닫혀요.');
-  await quiz('tori', '시장이 닫힌 날, 토끼 마을이 혼자서 잔치 음식을 마련하면 어떻게 될까?', ['물고기가 모자란다', '아무 문제 없다', '열매가 모자란다'], 0,
+  await quiz('tori', '다음 잔치 날에 시장이 닫힌다면, 토끼 마을이 혼자서 잔치 음식을 마련할 수 있을까?', ['물고기가 모자란다', '아무 문제 없다', '열매가 모자란다'], 0,
     { 1: '1장을 떠올려 봐. 혼자서는 하루에 물고기를 2마리밖에 못 잡았어.', 2: '열매는 하루에 12개까지 딸 수 있어. 문제는 물고기야.' });
   await say('gomi', '우리 곰 마을도 시장이 닫히면 열매를 못 구해. 열매 하나 따는 데 24시간이나 걸리는데…');
   await say('sage', '두 마을은 덜 아까운 일을 맡고 바꿔서 넉넉해졌지. 그 대신 다른 물건은 교역에 기대게 되었단다. 그래서 교역이 끊기면 곤란해질 수 있어.');
@@ -2823,10 +2823,10 @@ async function examBridge() {
 /* --- 선택 활동: 교역섬 시장 운영 (이레, 폭풍 두 번, 날마다 다른 값) --- */
 async function marketQuest() {
   if (!S.f.marketMet) {
-    await say('peng2', '교역관님! 폭풍 소식 기억나요? 이번에는 토끼 마을 살림을 이레 동안 맡아 주세요.');
+    await say('peng2', '교역관님! 폭풍 소식 기억나요? 이번에는 토끼 마을 살림을 일주일 동안 맡아 주세요.');
     await say('peng2', `날마다 토끼 마을에서 ${DAY_H}시간 일하고, 시장에서 바꾸고, ${amt('fish', NEED.fish)}와 ${amt('fruit', NEED.fruit)}를 먹어요. 남은 것은 창고에 쌓여요.`);
-    await say('peng2', '이번엔 이레 치 날씨와 시장 값 예보가 있어요. 폭풍은 두 번 오고, 폭풍 날엔 시장이 닫혀요. 물고기가 귀해 값이 비싼 품귀 날(💸)도 하루 있어요.');
-    await say('peng2', '목표는 이레 동안 한 번도 굶지 않기예요! 이레가 끝났을 때 창고가 넉넉할수록 더 잘한 거예요.');
+    await say('peng2', '이번엔 일주일 치 날씨와 시장 값 예보가 있어요. 폭풍은 두 번 오고, 폭풍 날엔 시장이 닫혀요. 물고기가 귀해 값이 비싼 품귀 날(💸)도 하루 있어요.');
+    await say('peng2', '목표는 일주일 동안 한 번도 굶지 않기예요! 일주일이 끝났을 때 창고가 넉넉할수록 더 잘한 거예요.');
     S.f.marketMet = true;
   } else if (await ask('peng2', S.f.marketDone ? '한 번 더 해 볼래요? 날씨와 값은 새로 정해져요.' : '시장 운영을 다시 해 볼래요?', ['좋아요', '다음에요'])) return;
   await say('peng2', '창고는 비어 있어요. 아침마다 토끼 마을에서 일하고, 저녁에 여기 시장으로 와요. 첫날부터 시작해 볼까요?');
@@ -2842,8 +2842,8 @@ async function marketQuest() {
   S.store = st.store; S.market = { best: Math.min(S.market ? S.market.best : h, h), tries: (S.market ? S.market.tries : 0) + 1, bestStore: better ? rec : prev };
   const first = !S.f.marketDone; S.f.marketDone = true; save();
   if (first) toast('✅ 선택 활동 완료: 교역섬 시장 운영', 'gold', 3200);
-  if (!h) { sfx('win'); await say('peng2', '이레 동안 한 번도 굶지 않았어요! 폭풍도 거뜬히 넘겼네요.'); }
-  else await say('peng2', `이레 동안 굶은 날이 ${h}번 있었어요. 값이 쌀 때 물고기를 사 두면 달라질 거예요. 다시 말을 걸면 새 예보로 해 볼 수 있어요.`);
+  if (!h) { sfx('win'); await say('peng2', '일주일 동안 한 번도 굶지 않았어요! 폭풍도 거뜬히 넘겼네요.'); }
+  else await say('peng2', `일주일 동안 굶은 날이 ${h}번 있었어요. 값이 쌀 때 물고기를 사 두면 달라질 거예요. 다시 말을 걸면 새 예보로 해 볼 수 있어요.`);
   await say('peng2', `남은 창고는 ${stockTxt(st.store)}예요. 물고기 1마리를 열매 ${OC}개로 치면 <b>열매 ${val(rec)}개</b>만큼 남았어요.${prev ? (better ? ' 지난 기록보다 넉넉해요!' : ` 지난 가장 좋은 기록은 굶은 날 ${prev.h}번, 열매 ${val(prev)}개만큼이었어요.`) : ''}`);
   if (waste) await say('peng2', `💸 물고기 품귀 날 물고기를 사느라 직접 잡을 때보다 열매 ${waste}개를 더 썼어요.`);
   await say('sage', '값이 쌀 때 넉넉히 사 두고 폭풍 전에 창고를 채우는 것. 교역의 이익을 지키면서 위험에 대비하는 방법이란다.');
@@ -2920,13 +2920,13 @@ async function examQuest() {
     S.f.lionMet = true;
   }
   const plan = EXAM_PLAN;
-  await say('lion', `보고서의 진술 ${plan.length}개를 심사해 주게. ${EXAM_PASS}개 이상 바르게 판정하면 수석 교역관으로 인정하지. 수첩은 언제든 펼쳐 봐도 좋네.`);
+  await say('lion', `보고서 ${plan.length}장을 심사해 주게. ${EXAM_PASS}장 이상 바르게 판정하면 수석 교역관으로 인정하지. 수첩은 언제든 펼쳐 봐도 좋네.`);
   Dlg.close();
   const r = await examBoard(plan);
   S.exam = Math.max(S.exam || 0, r.score); save();
-  if (r.score < EXAM_PASS) { await say('lion', `${r.score}개를 바르게 판정했군. 수첩을 다시 보고 오게. 언제든 다시 도전할 수 있네.`); return; }
+  if (r.score < EXAM_PASS) { await say('lion', `${r.score}장을 바르게 판정했군. 수첩을 다시 보고 오게. 언제든 다시 도전할 수 있네.`); return; }
   sfx('win');
-  await say('lion', `${r.score}개를 바르게 판정했군! 훌륭하네. 이 박람회 트로피를 받게.`);
+  await say('lion', `${r.score}장을 바르게 판정했군! 훌륭하네. 이 박람회 트로피를 받게.`);
   toast('🏆 박람회 트로피를 받았다!', 'gold', 3600);
   S.f.c6done = true; save();
   Dlg.close();
@@ -2963,7 +2963,7 @@ async function talkSage() {
   if (S.ch === 2) { await say('sage', '곰 마을에 가 보았니? 동쪽 바다 건너란다. 모래밭에서 바다 쪽으로 걸어가면 배를 탈 수 있지.'); return; }
   if (S.ch === 3 && !S.f.c3done) { await ch3(); return; }
   if (S.ch === 3) { await say('sage', '잔치를 열 사람은 토끼 촌장이란다. 촌장에게 말을 걸어 보렴.'); return; }
-  await say('sage', '시간이 남으면 선택 활동을 해 보렴. 교역섬 시장에서는 토끼 마을 살림을 이레 동안 맡을 수 있고, 북서쪽 여우섬에서는 여우 마을 일을, 북쪽 박람회섬에서는 시험지 같은 보고서를 기다린단다.');
+  await say('sage', '시간이 남으면 선택 활동을 해 보렴. 교역섬 시장에서는 토끼 마을 살림을 일주일 동안 맡을 수 있고, 북서쪽 여우섬에서는 여우 마을 일을 할 수 있지. 북쪽 박람회섬에서는 시험지 같은 보고서가, 북동쪽 쌍둥이섬에서는 닭 촌장이 기다린단다.');
 }
 async function talkRChief() {
   if (S.ch <= 1 && !S.f.c1done) { if (S.ch === 0) { await say('rchief', '거북 박사님을 먼저 만나 보게.'); return; } await ch1(); return; }
@@ -2990,7 +2990,7 @@ async function talkBChief() {
   if (atMarket()) { await say('bchief', '박사님 말씀을 들어 보세.'); return; }
   if (festivalTime()) { await say('bchief', '토끼 촌장이 잔치를 연다길래 왔소. 촌장에게 가 보게.'); return; }
   if (S.market && !S.market.best) { await say('bchief', '펭귄 상인 말로는 교역관 덕분에 폭풍이 두 번 와도 토끼 마을이 한 번도 굶지 않았다지! 우리도 배워야겠소.'); return; }
-  await say('bchief', '요즘은 물고기만 잡아도 열매가 넉넉하다네. 겨울 걱정이 없어!');
+  await say('bchief', '요즘은 물고기만 잡아도 열매가 넉넉하다네. 겨울 걱정이 없소!');
 }
 async function talkGomi() { await say('gomi', S.ch === 2 ? '촌장님께 먼저 말씀드려 봐!' : '같이 가자!'); }
 async function talkBear() {
@@ -3002,7 +3002,7 @@ async function talkFoxVillager() { await say('foxv', '우리 마을은 뭐든 �
 async function talkHen() { await say('hen', '꼬끼오! 여우섬에선 모든 걸 시간으로 적지. 물고기 1마리에 몇 시간, 열매 1개에 몇 시간. 시간이 적게 걸릴수록 잘하는 거야!'); }
 async function talkLion() {
   if (S.f.festival && !S.f.c6done) { await examQuest(); return; }
-  if (S.f.c6done) { const c = await ask('lion', '다시 심사해 보겠나?', ['좋아요', '다음에요']); if (c === 0) { Dlg.close(); const r = await examBoard(EXAM_PLAN); S.exam = Math.max(S.exam || 0, r.score); await say('lion', `${r.score}개를 바르게 판정했군. 최고 기록은 ${S.exam}개일세.`); } return; }
+  if (S.f.c6done) { const c = await ask('lion', '다시 심사해 보겠나?', ['좋아요', '다음에요']); if (c === 0) { Dlg.close(); const r = await examBoard(EXAM_PLAN); S.exam = Math.max(S.exam || 0, r.score); await say('lion', `${r.score}장을 바르게 판정했군. 최고 기록은 ${S.exam}장일세.`); } return; }
   await say('lion', '박람회는 아직 준비 중이네.');
 }
 async function talkHenChief() { if (!S.f.twinsDone) { await twins(); return; } await say('henchief', '기회비용이 같으면 바꿔도 소용없다는 걸 배웠지. 허허.'); }
@@ -3019,7 +3019,7 @@ function hintLines() {
     case 2: L.push(f.bearArrived ? ['tori', '곰 마을 촌장님 댁은 곰섬 광장 북쪽에 있대.'] : ['tori', '모래밭이나 부두에서 바다 쪽으로 걸어가면 배를 타. 동쪽으로 쭉 가면 곰섬이야!']); break;
     case 3: L.push(!f.c3done ? ['gomi', '교역섬은 두 섬 사이 북쪽의 작은 섬이야. 배에서 Ⓐ를 누르면 가 본 섬으로 바로 갈 수도 있어.'] : ['tori', '잔치는 우리 마을 광장에서 해! 할아버지께 가 보자.']); break;
     default:
-      if (!f.marketDone) L.push(['gomi', '교역섬 시장의 펭귄 상인이 이레 동안 토끼 마을 살림을 맡아 달래. 이번엔 날씨와 값 예보도 있대!']);
+      if (!f.marketDone) L.push(['gomi', '교역섬 시장의 펭귄 상인이 일주일 동안 토끼 마을 살림을 맡아 달래. 이번엔 날씨와 값 예보도 있대!']);
       else if (!f.c5done) L.push(['gomi', '북서쪽 여우섬의 여울이 하루 일해 줄 교역관을 찾는대.']);
       else if (!f.c6done) L.push(['fox', '북쪽 박람회섬의 사자 심사관한테 가 보자. 표를 보면 먼저 무슨 표인지부터 확인해!']);
       else if (!f.twinsDone) L.push(['tori', '북동쪽 쌍둥이섬의 닭 촌장님이 교역관을 찾는대.']);
