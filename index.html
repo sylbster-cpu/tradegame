@@ -2645,7 +2645,7 @@ const ask = (w, t, o) => Dlg.choose(w, t, o);
 
 async function prologue() {
   await sleep(300);
-  await say('sage', '어서 오렴, 용돌이! 나는 이 바다 섬들의 살림살이를 백 년 넘게 지켜본 거북 박사란다.');
+  await say('sage', '어서 오렴, 용돌이! 나는 이 바다 섬들의 살림살이를 오랫동안 지켜본 거북 박사란다.');
   await say('yd', '안녕하세요, 박사님! 오늘부터 견습 교역관이 된 용돌이예요.');
   await say('sage', '교역관은 섬과 섬 사이를 오가며 마을들이 더 넉넉하게 살도록 돕는 사람이지.');
   await say('sage', '이 수첩을 받으렴. 섬에서 겪으며 알게 된 것이 저절로 적히는 신기한 수첩이란다.');
@@ -3516,7 +3516,7 @@ function cGenExam(type) {
       () => ({ st: `${X}를 선택할 경우 암묵적 비용은 ${won(t ? R[X].imp : R[Y].ben)}이다.`, tr: t }),
       () => ({ st: `${Y}보다 ${X}를 선택하는 것이 합리적이다.`, tr: R[X].net > 0 })
     ])();
-    const stem = `<p>갑은 같은 시간에 할 수 있는 ${ctx[0]}(A)와 ${ctx[1]}(B) 가운데 하나만 선택할 수 있다. 표는 각 대안을 선택할 때 얻는 편익과 실제로 내야 하는 비용이다.</p>
+    const stem = `<p>갑은 같은 시간에 할 수 있는 ${ctx[0]}(A)${jo(ctx[0], '과', '와').slice(ctx[0].length)} ${ctx[1]}(B) 가운데 하나만 선택할 수 있다. 표는 각 대안을 선택할 때 얻는 편익과 실제로 내야 하는 비용이다.</p>
       ${UNIT_WON}<div class="tw"><table class="c-ex"><thead><tr><th>구분</th><th>A</th><th>B</th></tr></thead><tbody><tr><th>편익</th><td>${num(A.ben)}</td><td>${num(B.ben)}</td></tr><tr><th>비용</th><td>${num(A.cost)}</td><td>${num(B.cost)}</td></tr></tbody></table></div>`;
     const why = `${UNIT_WON}<div class="tw"><table class="c-ex"><thead><tr><th></th><th>A</th><th>B</th></tr></thead><tbody>
       <tr><th>명시적 비용</th><td>${num(A.cost)}</td><td>${num(B.cost)}</td></tr>
@@ -3569,7 +3569,7 @@ async function cBeach() {
   Dlg.close();
   await fadeTo(() => warp(20, 32, 'right'));
   toast('☀️ 다음 날 아침 · 바닷가', 'gold', 2400);
-  await say('band', '바닷가가 엉망이에요. 우리 펭귄들은 그물을 손질하느라 하루를 다 썼어요. 우리 손해는 누가 갚아 주나요?');
+  await say('band', '바닷가가 엉망이에요. 우리 펭귄들은 그물을 손질하느라 하루를 다 쓰게 생겼어요. 우리 손해는 누가 갚아 주나요?');
   const left = cleaned ? B.n - 1 : B.n, harm = left * B.harm, saved = left * B.clean;
   showCard(`<h3>🧹 쓰레기를 안 치우면</h3><div class="tw"><table class="mk-tbl"><thead><tr><th></th><th>부스 하나</th><th>안 치운 부스 ${left}곳 모두</th></tr></thead><tbody>
     <tr><th>부스가 아낀 품삯</th><td>${shellTxt(B.clean)}</td><td>${shellTxt(saved)}</td></tr>
@@ -3691,7 +3691,7 @@ function priceCard(title) {
 /* ---------- 목표·힌트: 지금 할 일(run)을 저장된 표시로만 정한다. 도중에 껐다 다시 열어도 이어서 할 일이 늘 하나 있다 ---------- */
 function fGoal() {
   const f = S.f, ch = S.ch, sg = (t, run) => ({ t, npc: 'f_sage', run });
-  if ((ch >= 2 && ch <= 4 && !f['pay' + ch]) || (ch === 5 && !f.ny)) return { t: `${SEASON_IC[ch]} ${SEASON[ch]}이 왔어요`, auto: true, run: fSeasonStart };
+  if ((ch >= 2 && ch <= 4 && !f['pay' + ch]) || (ch === 5 && !f.ny)) return { t: `${SEASON_IC[ch]} ${jo(SEASON[ch], '이', '가')} 왔어요`, auto: true, run: fSeasonStart };
   switch (ch) {
     case 0: return sg('거북 박사와 이야기하자', fPrologue);
     case 1: return !f.bank ? { t: '광장 남쪽 토끼섬 은행에 가 보자', npc: 'f_banker', run: fSpringBank }
@@ -3717,7 +3717,7 @@ function fGoal() {
 const F_WHERE = {
   f_sage: '거북 박사님은 광장 서쪽에 계셔. 말을 걸어 보자.', f_chief: '할아버지(촌장님)는 빨간 지붕 집 앞에 계셔.',
   f_banker: '토끼섬 은행은 광장 남쪽 큰 건물이야. 사자 은행원님께 말을 걸어 봐.', f_boss: '다람쥐 사장님 목공소는 연구소 서쪽이야.',
-  f_bear: '대신 투자 가게는 광장 동쪽, 곰 아주머니가 계신 노점이야.', f_peng: '펭귄 아저씨는 동쪽 부두 옆 배 앞에 계셔.', f_hen: '광장 가운데 지킴이 창구에 닭 아저씨가 서 계셔.'
+  f_bear: '대신 투자 가게는 광장 동쪽, 곰 운용가님이 계신 노점이야.', f_peng: '펭귄 아저씨는 동쪽 부두 옆 배 앞에 계셔.', f_hen: '광장 남쪽 지킴이 창구에 닭 아저씨가 서 계셔.'
 };
 function fHintLines() {
   const g = fGoal();
@@ -3934,7 +3934,7 @@ async function fSummerShop() {
   await fCertBoard();
   fEnd('buy');
   await say('boss', '고마워요! 증서는 장부에 꽂아 두세요. 작업장을 멋지게 지을게요.');
-  await say('tori', '광장 동쪽 대신 투자 가게의 곰 아주머니도 동전을 모은대. 가 보자!');
+  await say('tori', '광장 동쪽 대신 투자 가게의 곰 운용가님도 동전을 모은대. 가 보자!');
 }
 const fCertIn = k => k === 'bond' ? `<div class="f-cert-h">📜 차용증</div><p>다람쥐 목공소가 동전 <b>${FN.bond}</b>을 빌립니다.<br>겨울에 원금 ${FN.bond}과 덤 ${FN.bondMat - FN.bond}을 갚습니다.</p>`
   : `<div class="f-cert-h">📜 몫 증서</div><p>다람쥐 목공소 <b>100조각 가운데 1조각</b>. 값 ${FN.stock}.<br>이익이 나면 조각만큼 나눕니다. 다른 이에게 팔 수 있습니다.</p>`;
@@ -4123,7 +4123,7 @@ async function fWinterShop() {
   else await say('boss', `몫 증서 값은 지금 ${FN.stockP.winter}이에요. 이번에도 주인들께 이익을 조금 나눠 드렸어요.`);
   await say('boss', '몫 증서는 갚는 날이 없어요. 팔지 않으면 계속 목공소 주인이에요.');
   fEnd('wshop');
-  await say('tori', '광장 가운데 웬 줄이 길게 서 있어. 가 보자!');
+  await say('tori', '광장 남쪽에 웬 줄이 길게 서 있어. 가 보자!');
 }
 async function fGuard() {
   await say('hen2', '이웃 섬 물결 은행이 문을 닫았대요. 거기 맡긴 동전은 어떻게 되나요?');
