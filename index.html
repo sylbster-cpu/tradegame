@@ -1722,7 +1722,7 @@ const PAGES = [
   { id: 'comp', t: '비교 우위', where: '3장 · 교역섬 시장', body: () => `<p>기회비용이 <b>더 작은</b> 쪽, 곧 덜 아까운 쪽이 그 물건에 비교 우위가 있어요.</p>${ocTable(true)}
     <div class="rule">곰 마을 → 물고기 · 토끼 마을 → 열매</div><p>둘 다 절대 우위인 토끼 마을도 비교 우위는 열매 하나뿐이에요.</p>
     <p>한 마을 안의 두 기회비용은 서로 뒤집힌 수(역수)라서, 두 마을을 견주면 한 마을이 두 물건 모두에서 기회비용이 더 작을 수는 없어요. 그래서 두 마을의 기회비용이 다르면 서로 다른 물건에 비교 우위가 있어요.</p>` },
-  { id: 'gains', t: '특화와 교역의 이익', where: '3장 · 교역섬 시장', body: () => `<p>비교 우위가 있는 물건을 맡고(특화) 서로 바꾸면(교역) 두 마을을 합친 양이 늘어요.</p>${gainsTable()}
+  { id: 'gains', t: '특화와 교역의 이익', where: '3장 · 교역섬 시장', body: () => `<p>비교 우위가 있는 물건을 맡으면(특화) 두 마을을 합친 양이 늘고, 그것을 서로 바꾸면(교역) 두 마을 모두 넉넉해져요.</p>${gainsTable()}
     <p>절대 우위가 하나도 없는 곰 마을도 교역으로 이득을 봐요.</p>` },
   { id: 'ratio', t: '교환 비율', where: '3장 · 교역섬 시장', body: () => `<p>두 마을이 모두 이득인 값은 두 마을의 기회비용 <b>사이</b>예요.</p>
     <div class="rule">물고기 1마리 = 열매 <span class="nw">${fr(1, 2)}개</span> 초과, 6개 미만</div>
@@ -1739,9 +1739,9 @@ const PAGES = [
 ];
 const pagesOf = () => UNIT === 'choice' ? CPAGES : UNIT === 'finance' ? FPAGES : PAGES;
 const MEMOS = [
-  { id: 1, t: '박사님 메모 1', where: '남쪽 바위섬', body: '표를 만나면 먼저 무슨 표인지 보자. ① 하루에 얻는 양(최대 생산량) ② 1개 만드는 데 드는 시간·일꾼 수 ③ 기회비용. 표마다 기회비용 구하는 법이 달라.' },
+  { id: 1, t: '박사님 메모 1', where: '남쪽 바위섬', body: '표를 만나면 먼저 무슨 표인지 보자. ① 하루에 얻는 양(최대 생산량) ② 1개 만드는 데 드는 시간·노동자 수 ③ 기회비용. 표마다 기회비용 구하는 법이 달라.' },
   { id: 2, t: '박사님 메모 2', where: '동쪽 모래섬', body: '기회비용 표만 있으면 누가 더 많이 만드는지(절대 우위)는 알 수 없어. “갑국은 X재 생산에 절대 우위를 가진다”처럼 알 수 없는 것을 단정한 문장은 옳지 않은 문장이야.' },
-  { id: 3, t: '박사님 메모 3', where: '북동쪽 끝 섬', body: '1개당 일꾼 수 표만 있으면 나라 전체 일꾼이 몇 명인지 몰라. 그래서 “X재만 만들면 갑국이 을국보다 많이 만든다”는 알 수 없어. 이것도 옳지 않은 문장!' }
+  { id: 3, t: '박사님 메모 3', where: '북동쪽 끝 섬', body: '1개당 노동자 수 표만 있으면 나라 전체 노동자가 몇 명인지 몰라. 그래서 “X재만 만들면 갑국이 을국보다 많이 만든다”는 알 수 없어. 이것도 옳지 않은 문장!' }
 ];
 const PRODLINE = `<p class="prodline">1개를 만드는 데 드는 시간<br><span class="nw">🐰 ${IC.fish}${HR.r.fish}시간 ${IC.fruit}${HR.r.fruit}시간</span> · <span class="nw">🐻 ${IC.fish}${HR.b.fish}시간 ${IC.fruit}${HR.b.fruit}시간</span></p>`;
 function ocTable(mark) {
@@ -1784,7 +1784,7 @@ function prodTable() {
 function examGuide() {
   return `<div class="tw"><table class="octable"><thead><tr><th>표</th><th>X재 1단위의 기회비용</th><th>절대 우위</th></tr></thead><tbody>
     <tr><td>최대 생산량 (하루에 얻는 양)</td><td>Y재 양 ÷ X재 양</td><td>많이 만드는 쪽</td></tr>
-    <tr><td>1개당 시간·노동자 수</td><td>X재 시간 ÷ Y재 시간</td><td>적게 드는 쪽</td></tr>
+    <tr><td>1개당 시간·노동자 수</td><td>X재 시간(노동자 수) ÷ Y재 시간(노동자 수)</td><td>적게 드는 쪽</td></tr>
     <tr><td>기회비용 표</td><td>뒤집어서 빈칸 채우기</td><td>알 수 없음</td></tr></tbody></table></div>
     <p class="note">알 수 없는 것을 단정한 진술은 옳지 않은 진술이에요.</p>`;
 }
@@ -2161,7 +2161,7 @@ function mirrorBoard() {
     const render = () => {
       let body;
       if (st.step === 1 && !st.pick) {
-        body = `<p class="sub">오후 ${H.fish}시간이 남았어요. 낚시와 열매 따기 가운데 하나만 할 수 있어요. 무엇을 할까요?</p>
+        body = `<p class="sub">${H.fish}시간이 있다고 해 봐요. 낚시와 열매 따기 가운데 하나만 할 수 있어요. 무엇을 할까요?</p>
           <div class="row center"><button type="button" class="btn" id="mr-fish">🎣 낚시하기 (${H.fish}시간)</button><button type="button" class="btn" id="mr-fruit">🌳 열매 따기 (${H.fish}시간)</button></div>`;
       } else {
         const fishAct = `🎣 낚시 ${H.fish}시간`, fruitAct = `🌳 열매 따기 ${H.fish}시간`, fishGot = IC.fish, fruitGot = `<span class="mr-icons">${IC.fruit.repeat(n)}</span>`;
@@ -2169,7 +2169,7 @@ function mirrorBoard() {
           ? (st.pick === 'fish' ? pane(false, fishAct, fishGot) + pane(true, fruitAct, fruitGot) : pane(false, fruitAct, fruitGot) + pane(true, fishAct, fishGot))
           : pane(false, `🌳 열매 따기 ${H.fruit}시간`, IC.fruit) + pane(true, `🎣 낚시 ${H.fruit}시간`, `${sixth}<br><small>물고기 <span class="nw">${fr(1, n)}마리</span></small>`);
         const q = Q();
-        body = `<p class="sub">${st.step === 1 ? '거울 연못에 비친 다른 세계의 용돌이는 다른 일을 했어요.' : `이번엔 ${H.fruit}시간만 남았어요. 용돌이는 열매를 땄고, 거울 속 용돌이는 낚시를 했어요.`}</p>
+        body = `<p class="sub">${st.step === 1 ? '거울 연못에 비친 다른 세계의 용돌이는 다른 일을 했어요.' : `이번엔 ${H.fruit}시간만 있다고 해 봐요. 용돌이는 열매를 땄고, 거울 속 용돌이는 낚시를 했어요.`}</p>
           <div class="mr">${panes}</div><div class="mr-cap">거울 속 내가 가진 것 = <b>내가 포기한 것</b></div>
           <div class="mr-q"><b>${q.q}</b><div class="row">${(st.ord = st.ord || optOrder(q.o.length)).map(i => `<button type="button" class="btn ghost${st.wrong.includes(i) ? ' wrong' : ''}" data-a="${i}" ${st.ok || st.wrong.includes(i) ? 'disabled' : ''}>${q.o[i]}</button>`).join('')}</div></div>`;
       }
@@ -2706,7 +2706,7 @@ async function ch2() {
 
 /* --- 3장: 교역섬 시장 (비교 우위·특화와 교역·교환 비율·교역이 끊길 때) --- */
 const C3_HINTS = [
-  ['tori', '1장 장부를 떠올려 봐. 물고기 1마리를 잡는 6시간이면 열매를 몇 개 딸 수 있었지?'],
+  ['tori', '1장 거울 연못을 떠올려 봐. 물고기 1마리를 잡는 6시간이면 열매를 몇 개 딸 수 있었지?'],
   ['gomi', '시장에서는 물고기 1마리를 열매 몇 개에 살 수 있었어? 직접 잡을 때 포기하는 열매 6개와 비교해 봐.'],
   ['sage', '시장에 어떤 값이 나와도 물고기 1마리 값은 열매 6개보다 싸단다. 직접 잡는 것과 사 오는 것 가운데 어느 쪽이 덜 아까울까?'],
   ['sage', '12시간을 모두 열매 따기에 쓰고, 시장에서 물고기 3마리를 사 보렴.']
@@ -2844,7 +2844,7 @@ async function marketQuest() {
   if (first) toast('✅ 선택 활동 완료: 교역섬 시장 운영', 'gold', 3200);
   if (!h) { sfx('win'); await say('peng2', '일주일 동안 한 번도 굶지 않았어요! 폭풍도 거뜬히 넘겼네요.'); }
   else await say('peng2', `일주일 동안 굶은 날이 ${h}번 있었어요. 값이 쌀 때 물고기를 사 두면 달라질 거예요. 다시 말을 걸면 새 예보로 해 볼 수 있어요.`);
-  await say('peng2', `남은 창고는 ${stockTxt(st.store)}예요. 물고기 1마리를 열매 ${OC}개로 치면 <b>열매 ${val(rec)}개</b>만큼 남았어요.${prev ? (better ? ' 지난 기록보다 넉넉해요!' : ` 지난 가장 좋은 기록은 굶은 날 ${prev.h}번, 열매 ${val(prev)}개만큼이었어요.`) : ''}`);
+  await say('peng2', `창고에 남은 것은 물고기 ${st.store.fish}마리, 열매 ${st.store.fruit}개예요. 물고기 1마리를 열매 ${OC}개로 치면 <b>열매 ${val(rec)}개</b>만큼 남았어요.${prev ? (better ? ' 지난 기록보다 넉넉해요!' : ` 지난 가장 좋은 기록은 굶은 날 ${prev.h}번, 열매 ${val(prev)}개만큼이었어요.`) : ''}`);
   if (waste) await say('peng2', `💸 물고기 품귀 날 물고기를 사느라 직접 잡을 때보다 열매 ${waste}개를 더 썼어요.`);
   await say('sage', '값이 쌀 때 넉넉히 사 두고 폭풍 전에 창고를 채우는 것. 교역의 이익을 지키면서 위험에 대비하는 방법이란다.');
   await say('sage', `그리고 품귀 날처럼 물고기 1마리 값이 직접 잡을 때 포기하는 열매(${OC}개)보다 비싸면, 바꾸지 않는 게 낫단다. 교환 비율이 두 마을의 기회비용 사이에 있어야 교역이 서로에게 이득이지.`);
@@ -2905,7 +2905,7 @@ async function foxQuest() {
   hideCard();
   join('fox'); S.f.c5done = true; save();
   toast('✅ 선택 활동 완료: 여우섬', 'gold', 3200);
-  await say('fox', '마음에 들었어, 나도 같이 다닐래! 박람회섬 사자 심사관한테도 가 봐. 시간표 문제가 나와도 이제 끄떡없을걸?');
+  await say('fox', S.f.c6done ? '마음에 들었어, 나도 같이 다닐래! 이제 시간표 문제가 나와도 끄떡없을걸?' : '마음에 들었어, 나도 같이 다닐래! 박람회섬 사자 심사관한테도 가 보자. 시간표 문제가 나와도 이제 끄떡없을걸?');
   await tradeOptEnd();
 }
 
@@ -4590,7 +4590,7 @@ function helpModal() {
     <div class="tw"><table class="octable"><tbody>
     <tr><th>움직이기</th><td>방향키 · WASD · 화면 화살표 · 가고 싶은 곳 누르기</td></tr>
     <tr><th>말 걸기 · 대사 넘기기</th><td>스페이스 · 엔터 · Ⓐ 버튼 · 대화창 누르기</td></tr>
-    ${UNIT === 'trade' ? `<tr><th>배 타기 · 내리기</th><td>모래밭이나 부두에서 바다 쪽으로 걸어가면 타고, 모래밭에 닿으면 내려요</td></tr>
+    ${UNIT === 'trade' ? `<tr><th>배 타기 · 내리기</th><td>모래밭이나 부두에서 바다 쪽으로 걸어가면 타고, 모래밭이나 부두에 닿으면 내려요</td></tr>
     <tr><th>빠른 항해</th><td>배 위에서 스페이스나 Ⓐ</td></tr>` : ''}
     <tr><th>수첩 · 동료 · 설정</th><td>N · H · Esc</td></tr>
     <tr><th>선택지 고르기</th><td>숫자 키 1~4 또는 누르기</td></tr></tbody></table></div>
